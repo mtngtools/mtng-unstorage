@@ -1,0 +1,33 @@
+# Configuration for issue labeler
+# See: https://github.com/github/issue-labeler
+
+"area: aws-s3":
+  - "aws"
+  - "s3"
+  - "amazon"
+
+"area: drivers":
+  - "driver"
+  - "storage"
+
+"area: docs":
+  - "documentation"
+  - "readme"
+  - "docs"
+
+"area: tests":
+  - "test"
+  - "testing"
+  - "unit test"
+  - "e2e"
+
+"question":
+  - "how to"
+  - "how do i"
+  - "question"
+  - "help"
+
+"good first issue":
+  - "beginner"
+  - "starter"
+  - "easy"

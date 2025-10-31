@@ -1,0 +1,81 @@
+{
+  "name": "@mtngtools/unstorage",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Custom storage drivers for unstorage with AWS S3 support",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./aws-s3": {
+      "types": "./dist/drivers/aws-s3/aws-s3.d.ts",
+      "import": "./dist/drivers/aws-s3/aws-s3.js",
+      "require": "./dist/drivers/aws-s3/aws-s3.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "test": "vitest run",
+    "test:e2e": "VITEST_POOL_THREADS=false NODE_ENV=test vitest run tests-e2e/aws-s3.e2e.test.ts --config vitest.e2e.config.ts",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.js",
+    "lint:fix": "eslint src --ext .ts,.js --fix",
+    "prepublishOnly": "pnpm run typecheck && pnpm run lint && pnpm run build && pnpm run test"
+  },
+  "keywords": [
+    "storage",
+    "unstorage",
+    "aws",
+    "s3",
+    "drivers",
+    "typescript"
+  ],
+  "author": "Jason Bulson",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mtngtools/mtng-unstorage.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mtngtools/mtng-unstorage/issues"
+  },
+  "homepage": "https://github.com/mtngtools/mtng-unstorage#readme",
+  "peerDependencies": {
+    "@aws-sdk/client-s3": "^3.0.0",
+    "unstorage": "^1.0.0"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-s3": "^3.922.0",
+    "@eslint/js": "^9.39.0",
+  "@types/node": "^20.19.24",
+    "@typescript-eslint/parser": "^8.46.2",
+  "@vitest/coverage-v8": "^4.0.6",
+    "eslint": "^9.39.0",
+    "typescript": "^5.9.3",
+    "unstorage": "^1.17.2",
+    "vite": "^7.1.12",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^4.0.6"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "destr": "^2.0.5"
+  }
+}

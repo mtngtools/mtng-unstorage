@@ -1,0 +1,58 @@
+import { defineConfig } from 'vitest/config';
+import dts from 'vite-plugin-dts';
+
+export default defineConfig({
+  plugins: [
+    dts({
+      insertTypesEntry: true,
+      include: ['src/**/*'],
+      exclude: ['src/**/*.test.ts', 'tests-e2e/**/*']
+    })
+  ],
+  build: {
+    lib: {
+      entry: {
+        index: 'src/index.ts',
+        'drivers/aws-s3/aws-s3': 'src/drivers/aws-s3/aws-s3.ts'
+      },
+      name: 'MtngUnstorage',
+      formats: ['es', 'cjs']
+    },
+    rollupOptions: {
+      external: ['@aws-sdk/client-s3', 'unstorage'],
+      output: {
+        exports: 'named',
+        globals: {
+          '@aws-sdk/client-s3': 'AWS_S3',
+          'unstorage': 'Unstorage'
+        }
+      }
+    },
+    target: 'es2020',
+    minify: false,
+    sourcemap: true
+  },
+  test: {
+    globals: true,
+    environment: 'node',
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/tests-e2e/**',
+      '**/.{idea,git,cache,output,temp}/**',
+      '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*'
+    ],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/**',
+        'dist/**',
+        'tests-e2e/**',
+        '**/*.test.ts',
+        '**/*.d.ts'
+      ]
+    },
+    setupFiles: ['./vitest.setup.ts']
+  }
+})

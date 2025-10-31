@@ -1,0 +1,63 @@
+# Configuration for PR labeler
+# See: https://github.com/actions/labeler
+
+"area: drivers":
+  - changed-files:
+    - any-glob-to-any-file: 
+      - src/drivers/**/*
+      - docs/drivers/**/*
+
+"area: aws-s3":
+  - changed-files:
+    - any-glob-to-any-file:
+      - src/drivers/aws-s3/**/*
+      - docs/drivers/aws-s3.md
+      - tests-e2e/aws-s3.e2e.test.ts
+
+"area: core":
+  - changed-files:
+    - any-glob-to-any-file:
+      - src/index.ts
+      - src/types.ts
+      - src/utils.ts
+
+"area: tests":
+  - changed-files:
+    - any-glob-to-any-file:
+      - "**/*.test.ts"
+      - tests-e2e/**/*
+      - vitest.*.ts
+
+"area: docs":
+  - changed-files:
+    - any-glob-to-any-file:
+      - "**/*.md"
+      - docs/**/*
+
+"area: ci":
+  - changed-files:
+    - any-glob-to-any-file:
+      - .github/**/*
+      - "*.yml"
+      - "*.yaml"
+
+"area: build":
+  - changed-files:
+    - any-glob-to-any-file:
+      - package.json
+      - pnpm-lock.yaml
+      - tsconfig.json
+      - vite.config.ts
+      - rollup.config.js
+
+"dependencies":
+  - changed-files:
+    - any-glob-to-any-file:
+      - package.json
+      - pnpm-lock.yaml
+
+"breaking change":
+  - changed-files:
+    - any-glob-to-any-file:
+      - src/index.ts
+      - src/types.ts
