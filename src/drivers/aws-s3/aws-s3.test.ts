@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import awsS3Driver, { toStorageKey } from './aws-s3.js';
+import awsS3Driver from './aws-s3.js';
+import { toS3StorageKey } from './shared.js';
+import { AWS_S3_DRIVER_NAME } from './types.js';
 import type { S3Client } from '@aws-sdk/client-s3';
 
 // Mock the AWS SDK
@@ -62,7 +64,7 @@ describe('S3 Driver', () => {
         s3Client: mockS3Client,
         bucket: 'test-bucket'
       })
-      expect(driver.name).toBe('aws-s3')
+  expect(driver.name).toBe(AWS_S3_DRIVER_NAME)
     })
   })
 
@@ -523,79 +525,79 @@ describe('S3 Driver', () => {
     })
   })
 
-  describe('toStorageKey', () => {
+  describe('toS3StorageKey', () => {
     describe('basic functionality', () => {
       it('should return key as-is with empty options', () => {
-        expect(toStorageKey('test-key', {})).toBe('test-key')
+  expect(toS3StorageKey('test-key', {})).toBe('test-key')
       })
 
       it('should normalize keys by removing leading/trailing slashes', () => {
-        expect(toStorageKey('/test-key/', {})).toBe('test-key')
-        expect(toStorageKey('///test-key///', {})).toBe('test-key')
+  expect(toS3StorageKey('/test-key/', {})).toBe('test-key')
+  expect(toS3StorageKey('///test-key///', {})).toBe('test-key')
       })
 
       it('should normalize multiple consecutive slashes', () => {
-        expect(toStorageKey('path//to///key', {})).toBe('path/to/key')
+  expect(toS3StorageKey('path//to///key', {})).toBe('path/to/key')
       })
     })
 
     describe('with base path', () => {
       it('should prepend base path to key', () => {
-        expect(toStorageKey('test-key', { base: 'app' })).toBe('app/test-key')
+  expect(toS3StorageKey('test-key', { base: 'app' })).toBe('app/test-key')
       })
 
       it('should handle base with slashes', () => {
-        expect(toStorageKey('test-key', { base: '/app/' })).toBe('app/test-key')
-        expect(toStorageKey('/test-key/', { base: '/app/' })).toBe('app/test-key')
+  expect(toS3StorageKey('test-key', { base: '/app/' })).toBe('app/test-key')
+  expect(toS3StorageKey('/test-key/', { base: '/app/' })).toBe('app/test-key')
       })
 
       it('should handle nested base paths', () => {
-        expect(toStorageKey('user/data', { base: 'app/users' })).toBe('app/users/user/data')
+  expect(toS3StorageKey('user/data', { base: 'app/users' })).toBe('app/users/user/data')
       })
 
       it('should handle empty base', () => {
-        expect(toStorageKey('test-key', { base: '' })).toBe('test-key')
-        expect(toStorageKey('test-key', { base: undefined })).toBe('test-key')
+  expect(toS3StorageKey('test-key', { base: '' })).toBe('test-key')
+  expect(toS3StorageKey('test-key', { base: undefined })).toBe('test-key')
       })
     })
 
     describe('with s3StoragePrefix', () => {
       it('should prepend s3StoragePrefix to key', () => {
-        expect(toStorageKey('test-key', { s3StoragePrefix: 'storage' })).toBe('storage/test-key')
+  expect(toS3StorageKey('test-key', { s3StoragePrefix: 'storage' })).toBe('storage/test-key')
       })
 
       it('should handle s3StoragePrefix with slashes', () => {
-        expect(toStorageKey('test-key', { s3StoragePrefix: '/storage/' })).toBe('storage/test-key')
-        expect(toStorageKey('/test-key/', { s3StoragePrefix: '/storage/' })).toBe('storage/test-key')
+  expect(toS3StorageKey('test-key', { s3StoragePrefix: '/storage/' })).toBe('storage/test-key')
+  expect(toS3StorageKey('/test-key/', { s3StoragePrefix: '/storage/' })).toBe('storage/test-key')
       })
 
       it('should handle nested s3StoragePrefix', () => {
-        expect(toStorageKey('user/data', { s3StoragePrefix: 'prod/storage' })).toBe('prod/storage/user/data')
+  expect(toS3StorageKey('user/data', { s3StoragePrefix: 'prod/storage' })).toBe('prod/storage/user/data')
       })
 
       it('should handle empty s3StoragePrefix', () => {
-        expect(toStorageKey('test-key', { s3StoragePrefix: '' })).toBe('test-key')
-        expect(toStorageKey('test-key', { s3StoragePrefix: undefined })).toBe('test-key')
+  expect(toS3StorageKey('test-key', { s3StoragePrefix: '' })).toBe('test-key')
+  expect(toS3StorageKey('test-key', { s3StoragePrefix: undefined })).toBe('test-key')
       })
     })
 
     describe('with both base and s3StoragePrefix', () => {
       it('should apply s3StoragePrefix first, then base', () => {
-        expect(toStorageKey('test-key', { 
+        expect(toS3StorageKey('test-key', { 
           base: 'app', 
           s3StoragePrefix: 'storage' 
         })).toBe('storage/app/test-key')
       })
 
       it('should handle complex nested paths', () => {
-        expect(toStorageKey('user/profile/data', { 
+        expect(toS3StorageKey('user/profile/data', { 
           base: 'app/users', 
           s3StoragePrefix: 'prod/storage' 
         })).toBe('prod/storage/app/users/user/profile/data')
       })
 
       it('should normalize all path components', () => {
-        expect(toStorageKey('/user//profile///data/', { 
+        expect(toS3StorageKey('/user//profile///data/', { 
           base: '/app//users/', 
           s3StoragePrefix: '//prod///storage//' 
         })).toBe('prod/storage/app/users/user/profile/data')
@@ -604,26 +606,26 @@ describe('S3 Driver', () => {
 
     describe('edge cases', () => {
       it('should handle empty key', () => {
-        expect(() => toStorageKey('', {})).toThrow('Key must be a non-empty string')
+  expect(() => toS3StorageKey('', {})).toThrow('Key must be a non-empty string')
       })
 
       it('should reject keys with path traversal', () => {
-        expect(() => toStorageKey('../test', {})).toThrow('Key cannot contain ".." path segments')
-        expect(() => toStorageKey('test/../other', {})).toThrow('Key cannot contain ".." path segments')
-        expect(() => toStorageKey('test/..', {})).toThrow('Key cannot contain ".." path segments')
+  expect(() => toS3StorageKey('../test', {})).toThrow('Key cannot contain ".." path segments')
+  expect(() => toS3StorageKey('test/../other', {})).toThrow('Key cannot contain ".." path segments')
+  expect(() => toS3StorageKey('test/..', {})).toThrow('Key cannot contain ".." path segments')
       })
 
       it('should reject non-string keys', () => {
-        expect(() => toStorageKey(null as any, {})).toThrow('Key must be a non-empty string')
-        expect(() => toStorageKey(undefined as any, {})).toThrow('Key must be a non-empty string')
-        expect(() => toStorageKey(42 as any, {})).toThrow('Key must be a non-empty string')
-        expect(() => toStorageKey({} as any, {})).toThrow('Key must be a non-empty string')
+  expect(() => toS3StorageKey(null as any, {})).toThrow('Key must be a non-empty string')
+  expect(() => toS3StorageKey(undefined as any, {})).toThrow('Key must be a non-empty string')
+  expect(() => toS3StorageKey(42 as any, {})).toThrow('Key must be a non-empty string')
+  expect(() => toS3StorageKey({} as any, {})).toThrow('Key must be a non-empty string')
       })
 
       it('should handle only slashes in paths', () => {
-        expect(toStorageKey('key', { base: '///' })).toBe('key')
-        expect(toStorageKey('key', { s3StoragePrefix: '///' })).toBe('key')
-        expect(toStorageKey('key', { base: '///', s3StoragePrefix: '///' })).toBe('key')
+  expect(toS3StorageKey('key', { base: '///' })).toBe('key')
+  expect(toS3StorageKey('key', { s3StoragePrefix: '///' })).toBe('key')
+  expect(toS3StorageKey('key', { base: '///', s3StoragePrefix: '///' })).toBe('key')
       })
     })
   })

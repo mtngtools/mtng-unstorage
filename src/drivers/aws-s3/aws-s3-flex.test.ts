@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import awsS3FlexDriver, { toStorageKey } from './aws-s3-flex.js';
+import awsS3FlexDriver from './aws-s3-flex.js';
 import type { S3Client } from '@aws-sdk/client-s3';
+import { toS3StorageKey } from './shared.js';
 
 // Reuse the same mocks as the basic driver tests
 const mockS3Client = {
@@ -41,8 +42,8 @@ describe('S3 Flex Driver (phase1 parity)', () => {
     expect(driver.name).toBe('test-s3-flex')
   })
 
-  it('toStorageKey should behave like basic driver', () => {
-    expect(toStorageKey('test-key', {})).toBe('test-key')
-    expect(toStorageKey('/test-key/', { s3StoragePrefix: '/storage/' })).toBe('storage/test-key')
+  it('toS3StorageKey should behave like basic driver', () => {
+    expect(toS3StorageKey('test-key', {})).toBe('test-key')
+    expect(toS3StorageKey('/test-key/', { s3StoragePrefix: '/storage/' })).toBe('storage/test-key')
   })
 })

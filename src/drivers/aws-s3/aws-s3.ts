@@ -1,129 +1,36 @@
 import type { PutObjectCommandInput } from '@aws-sdk/client-s3';
 import { defineDriver } from 'unstorage';
-import { validateKey } from '../../utils.js';
-import type { MTBaseDriverOptions } from '../../types';
-import type { SharedAwsS3DriverOptions } from './types';
+import type { AwsS3DriverOptions, S3PutObjectOptions } from './types';
+import { toS3StorageKey, joinS3Key, validateS3Options } from './shared.js';
+import { filterKeyByDepth, checkReadOnly, streamToString } from '../../utils.js';
+import { AWS_S3_DRIVER_NAME } from './types.js';
 
-/**
- * Custom type for additional S3 PutObject parameters
- * Excludes Bucket, Key, and Body which are set by the driver
- */
-export type S3PutObjectOptions = Omit<PutObjectCommandInput, 'Bucket' | 'Key' | 'Body'>
-
-/**
- * Normalizes a storage key by removing leading/trailing slashes
- * and ensuring consistent path format
- */
-function normalizeKey(key: string): string {
-  return key.replace(/^\/+|\/+$/g, '').replace(/\/+/g, '/');
-}
-
-/**
- * Filters a key by maxDepth, counting ':' separators
- */
-function filterKeyByDepth(key: string, maxDepth: number | undefined): boolean {
-  if (maxDepth === undefined) {
-    return true;
-  }
-
-  let substrCount = 0;
-  let index = key.indexOf(':');
-
-  while (index > -1) {
-    substrCount++;
-    index = key.indexOf(':', index + 1);
-  }
-
-  return substrCount <= maxDepth;
-}
-
-/**
- * Joins base path with key, handling slashes properly
- */
-function joinKey(base: string | undefined, key: string): string {
-  if (!base) return normalizeKey(key);
-  
-  const normalizedBase = normalizeKey(base);
-  const normalizedKey = normalizeKey(key);
-  
-  if (!normalizedKey) return normalizedBase;
-  if (!normalizedBase) return normalizedKey;
-  
-  return `${normalizedBase}/${normalizedKey}`;
-}
-
-/**
- * Configuration options for the S3 storage driver
- */
-export type awsS3DriverOptions = MTBaseDriverOptions & SharedAwsS3DriverOptions;
-
-/**
- * Converts a storage key to an S3 object key using the provided options
- */
-export function toStorageKey(key: string, options: { base?: string, s3StoragePrefix?: string }): string {
-  validateKey(key);
-  const fullKey = joinKey(options.base, key);
-  return joinKey(options.s3StoragePrefix, fullKey);
-}
-
-/**
+/*
  * AWS S3 storage driver for unstorage
+ * - Uses driver-local helpers in `./shared.ts` for S3-specific behavior
+ * - Uses general helpers from `../../utils.ts` where applicable
  */
-export default defineDriver((options: awsS3DriverOptions) => {
+export default defineDriver((options: AwsS3DriverOptions) => {
   const {
     s3Client,
     bucket,
     s3StoragePrefix = '',
     base = '',
-    name = 'aws-s3',
+    name = AWS_S3_DRIVER_NAME, //aws-s3
     readOnly = false,
     allowClear = false
   } = options;
 
-  if (!s3Client) {
-    throw new Error('S3Client instance is required');
-  }
-  
-  if (!bucket) {
-    throw new Error('S3 bucket name is required');
-  }
+  validateS3Options({ s3Client, bucket });
 
-  /**
-   * Throws an error if the driver is in read-only mode
-   */
-  function checkReadOnly(operation: string): void {
-    if (readOnly) {
-      throw new Error(`Cannot perform ${operation}: driver is in read-only mode`);
-    }
-  }
-
-  /**
-   * Converts buffer/stream data to string
-   */
-  async function streamToString(stream: any): Promise<string> {
-    if (!stream) return '';
-    
-    if (typeof stream === 'string') return stream;
-    
-    if (stream.transformToString) {
-      return await stream.transformToString();
-    }
-    
-    // Handle Node.js streams
-    const chunks: Buffer[] = [];
-    return new Promise((resolve, reject) => {
-      stream.on('data', (chunk: Buffer) => chunks.push(chunk));
-      stream.on('error', reject);
-      stream.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
-    });
-  }
+  // Using shared helpers from driver-local `./shared.ts` and general `utils.ts`
 
   async function hasItem(key: string, _opts: any): Promise<boolean> {
     try {
-      const s3Key = toStorageKey(key, { base, s3StoragePrefix });
+        const Key = toS3StorageKey(key, { base, s3StoragePrefix });
       const command = new (await import('@aws-sdk/client-s3')).HeadObjectCommand({
         Bucket: bucket,
-        Key: s3Key
+        Key
       });
       
       await s3Client.send(command);
@@ -138,10 +45,10 @@ export default defineDriver((options: awsS3DriverOptions) => {
 
   async function getItem(key: string, _opts?: any): Promise<any> {
     try {
-      const s3Key = toStorageKey(key, { base, s3StoragePrefix });
+        const Key = toS3StorageKey(key, { base, s3StoragePrefix });
       const command = new (await import('@aws-sdk/client-s3')).GetObjectCommand({
         Bucket: bucket,
-        Key: s3Key
+        Key
       });
       
       const response = await s3Client.send(command);
@@ -162,13 +69,13 @@ export default defineDriver((options: awsS3DriverOptions) => {
   }
 
   async function setItem(key: string, value: string, opts?: { s3Options?: S3PutObjectOptions }): Promise<void> {
-    checkReadOnly('setItem');
+    checkReadOnly(readOnly, 'setItem');
     
-    const s3Key = toStorageKey(key, { base, s3StoragePrefix });
-    
+      const Key = toS3StorageKey(key, { base, s3StoragePrefix });
+
     const putObjectParams: PutObjectCommandInput = {
       Bucket: bucket,
-      Key: s3Key,
+      Key,
       Body: value,  // Value is already serialized by the Storage layer
       ...opts?.s3Options // Spread any additional S3 options
     };
@@ -178,12 +85,12 @@ export default defineDriver((options: awsS3DriverOptions) => {
   }
 
   async function removeItem(key: string, _opts: any): Promise<void> {
-    checkReadOnly('removeItem');
+    checkReadOnly(readOnly, 'removeItem');
     
-    const s3Key = toStorageKey(key, { base, s3StoragePrefix });
+    const Key = toS3StorageKey(key, { base, s3StoragePrefix });
     const command = new (await import('@aws-sdk/client-s3')).DeleteObjectCommand({
       Bucket: bucket,
-      Key: s3Key
+      Key
     });
     
     await s3Client.send(command);
@@ -194,12 +101,12 @@ export default defineDriver((options: awsS3DriverOptions) => {
     // Build the search prefix by combining the driver base, basePrefix
     let searchPrefix = s3StoragePrefix || '';
     if (base) {
-      searchPrefix = joinKey(searchPrefix, base);
+      searchPrefix = joinS3Key(searchPrefix, base);
     }
     if (basePrefix && basePrefix.trim()) {
       // Convert to S3 path format for searching
       const s3BasePrefix = basePrefix.replace(/:/g, '/');
-      searchPrefix = joinKey(searchPrefix, s3BasePrefix);
+        searchPrefix = joinS3Key(searchPrefix, s3BasePrefix);
     }
     
     const keys: string[] = [];
@@ -225,7 +132,7 @@ export default defineDriver((options: awsS3DriverOptions) => {
             let key = object.Key!;
             
             // Remove s3StoragePrefix if present
-            if (s3StoragePrefix && key.startsWith(s3StoragePrefix)) {
+        if (s3StoragePrefix && key.startsWith(s3StoragePrefix)) {
               key = key.slice(s3StoragePrefix.length);
               if (key.startsWith('/')) {
                 key = key.slice(1);
@@ -258,7 +165,7 @@ export default defineDriver((options: awsS3DriverOptions) => {
   }
 
   async function clear(base: string, opts: any): Promise<void> {
-    checkReadOnly('clear');
+    checkReadOnly(readOnly, 'clear');
     
     if (!allowClear) {
       throw new Error('Cannot perform clear: allowClear option must be set to true');

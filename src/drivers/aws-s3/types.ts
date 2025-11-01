@@ -1,5 +1,5 @@
 import type { MTBaseDriverOptions } from '../../types';
-import type { S3Client } from '@aws-sdk/client-s3';
+import type { S3Client, PutObjectCommandInput } from '@aws-sdk/client-s3';
 
 /**
  * Generic flex driver options alias that currently equals MTBaseDriverOptions.
@@ -32,4 +32,21 @@ export type SharedAwsS3DriverOptions = {
  */
 export type AwsS3FlexDriverOptions = MTFlexDriverOptions & SharedAwsS3DriverOptions;
 
+/**
+ * Custom type for additional S3 PutObject parameters
+ * Excludes Bucket, Key, and Body which are set by the driver
+ */
+export type S3PutObjectOptions = Omit<PutObjectCommandInput, 'Bucket' | 'Key' | 'Body'>;
+
+/**
+ * Configuration options for the S3 storage driver
+ */
+export type AwsS3DriverOptions = MTBaseDriverOptions & SharedAwsS3DriverOptions;
+
 export default {} as const;
+
+/**
+ * Driver name constants
+ */
+export const AWS_S3_DRIVER_NAME = 'aws-s3' as const;
+export const AWS_S3_FLEX_DRIVER_NAME = 'aws-s3-flex' as const;

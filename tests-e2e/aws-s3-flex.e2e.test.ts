@@ -1,37 +1,22 @@
 /**
- * E2E test suite for the AWS S3 driver.
+ * E2E test suite for the AWS S3 FLEX driver.
  *
- * Notes:
- * - These tests are optional and are NOT run in CI by default.
- * - To run in CI, trigger the CI workflow manually (workflow_dispatch) with input `run_e2e: true`.
- * - To run locally, set the following environment variables and execute `pnpm run test:e2e`:
- *   - AWS_S3_E2E_ENABLED=true
- *   - AWS_S3_TEST_BUCKET=<your-test-bucket>
- *   - AWS_S3_TEST_PREFIX=<optional-prefix>
- *
- * AWS credentials (required for AWS SDK to run S3 commands):
- * - Credentials must be configured so the AWS SDK can authenticate.
- * - Any standard method supported by the AWS SDK v3 is valid, for example:
- *   - Environment variables: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_REGION (or AWS_DEFAULT_REGION)
- *   - Shared config/credentials files: ~/.aws/config and ~/.aws/credentials (optionally with AWS_PROFILE)
- *   - IAM role via EC2/ECS/SSO or other supported providers
- * - If credentials are not available via the default provider chain, set the env vars above.
+ * This mirrors `tests-e2e/aws-s3.e2e.test.ts` but uses the `aws-s3-flex` driver.
+ * The tests are skipped by default unless `AWS_S3_E2E_ENABLED=true` is set in the env.
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { createStorage } from 'unstorage';
-import awsS3Driver from '../src/drivers/aws-s3/aws-s3';
+import awsS3FlexDriver from '../src/drivers/aws-s3/aws-s3-flex';
 import { S3Client } from '@aws-sdk/client-s3';
 
-describe('AWS S3 Driver E2E Tests', () => {
+describe('AWS S3 FLEX Driver E2E Tests', () => {
   let storage: ReturnType<typeof createStorage>;
   let s3Client: S3Client;
 
-  // These tests would require actual AWS credentials and an S3 bucket
-  // In a real environment, you would use a test bucket or LocalStack
   const isE2EEnabled = process.env.AWS_S3_E2E_ENABLED === 'true';
   const testBucket = process.env.AWS_S3_TEST_BUCKET || 'test-bucket-not-set';
   const baseTestPrefix = process.env.AWS_S3_TEST_PREFIX || 'test-mtng-unstorage-e2e/';
-  const testPrefix = `${baseTestPrefix}aws-s3/`;
+  const testPrefix = `${baseTestPrefix}aws-s3-flex/`;
 
   beforeEach(async () => {
     if (!isE2EEnabled) {
@@ -45,7 +30,7 @@ describe('AWS S3 Driver E2E Tests', () => {
     });
 
     storage = createStorage({
-      driver: awsS3Driver({
+      driver: awsS3FlexDriver({
         s3Client,
         bucket: testBucket,
         s3StoragePrefix: testPrefix,
@@ -79,7 +64,7 @@ describe('AWS S3 Driver E2E Tests', () => {
 
     // Should now exist
     expect(await storage.hasItem(testKey)).toBe(true)
-    
+
     // Get item should return the same value
     const retrieved = await storage.getItem(testKey)
     expect(retrieved).toEqual(testValue)
@@ -196,7 +181,7 @@ describe('AWS S3 Driver E2E Tests', () => {
     const testKey = 'large-object'
 
     await storage.setItem(testKey, largeObject)
-    
+
     const retrieved = await storage.getItem(testKey)
     expect(retrieved).toEqual(largeObject)
 
@@ -251,7 +236,7 @@ describe('AWS S3 Driver E2E Tests', () => {
 
   it.skipIf(!isE2EEnabled)('should work with custom content type and encryption', async () => {
     const customStorage = createStorage({
-      driver: awsS3Driver({
+      driver: awsS3FlexDriver({
         s3Client,
         bucket: testBucket,
         s3StoragePrefix: testPrefix + 'custom/'
@@ -262,7 +247,7 @@ describe('AWS S3 Driver E2E Tests', () => {
     const testValue = 'plain text value'
 
     await customStorage.setItem(testKey, testValue)
-    
+
     const retrieved = await customStorage.getItem(testKey)
     expect(retrieved).toBe(testValue)
 

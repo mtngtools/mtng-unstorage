@@ -7,8 +7,8 @@
 export type { MTBaseDriverOptions } from './types.js'
 
 // AWS S3 Driver
-export { default as awsS3Driver, toStorageKey } from './drivers/aws-s3/aws-s3.js'
-export type { awsS3DriverOptions, S3PutObjectOptions } from './drivers/aws-s3/aws-s3.js'
+export { default as awsS3Driver, toS3StorageKey } from './drivers/aws-s3/aws-s3.js'
+export type { AwsS3DriverOptions, S3PutObjectOptions } from './drivers/aws-s3/aws-s3.js'
 
 // Utilities
 export { serialize, deserialize, validateKey } from './utils.js'
@@ -21,7 +21,7 @@ import {
   serialize, 
   deserialize, 
   validateKey,
-  toStorageKey
+  toS3StorageKey
 } from '@mtng/unstorage'
 
 // Serialize/deserialize values
@@ -33,7 +33,7 @@ validateKey('valid-key')     // OK
 validateKey('../invalid')    // Throws error
 
 // Get S3 storage key (useful for debugging or custom operations)
-const s3Key = toStorageKey('user/data', { 
+const s3Key = toS3StorageKey('user/data', { 
   base: 'app', 
   s3StoragePrefix: 'prod' 
 }) // 'prod/app/user/data'
@@ -44,7 +44,7 @@ const s3Key = toStorageKey('user/data', {
 Creates an S3 storage driver.
 
 **Parameters:**
-- `options: awsS3DriverOptions` - Configuration options
+- `options: AwsS3DriverOptions` - Configuration options
 
 **Returns:**
 - `BaseDriver` - Storage driver instance

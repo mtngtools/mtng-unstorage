@@ -9,5 +9,6 @@ export {
 } from './utils.js';
 
 // Export drivers
-export { default as awsS3Driver, toStorageKey } from './drivers/aws-s3/aws-s3.js';
-export type { awsS3DriverOptions, S3PutObjectOptions } from './drivers/aws-s3/aws-s3.js';
+export { default as awsS3Driver } from './drivers/aws-s3/aws-s3.js';
+export { toS3StorageKey } from './drivers/aws-s3/shared.js';
+export type { AwsS3DriverOptions, S3PutObjectOptions } from './drivers/aws-s3/types.js';

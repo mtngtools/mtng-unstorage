@@ -20,3 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Utility functions: serialize, deserialize, validateKey, toStorageKey
 - Unit and E2e tests
 - ESM and CJS builds with tree-shaking support
+
+## [Unreleased]
+
+### Breaking
+- Remove backward-compatible alias exports `toStorageKey`, `normalizeKey`, and `joinKey` in favor of explicit S3-specific helpers (`toS3StorageKey`, `normalizeS3Key`, `joinS3Key`). This will be a breaking change and will be released in the next major version. Update any code that imports the old aliases to use the new names.
+ - Rename `awsS3DriverOptions` to `AwsS3DriverOptions` (capitalized) — this is a breaking type name change. Update any TypeScript imports to use `AwsS3DriverOptions`.
