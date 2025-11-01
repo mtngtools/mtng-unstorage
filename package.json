@@ -1,7 +1,7 @@
 {
   "name": "@mtngtools/unstorage",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Custom storage drivers for unstorage with AWS S3 support",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
