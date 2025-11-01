@@ -47,7 +47,7 @@ await storage.removeItem('user:123')
 ## Configuration Options
 
 ```typescript
-interface awsS3DriverOptions extends MTBaseDriverOptions {
+interface AwsS3DriverOptions extends MTBaseDriverOptions {
   // Required
   s3Client: S3Client            // AWS S3 client instance
   bucket: string                // S3 bucket name

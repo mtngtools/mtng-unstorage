@@ -20,3 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Utility functions: serialize, deserialize, validateKey, toStorageKey
 - Unit and E2e tests
 - ESM and CJS builds with tree-shaking support
+
+## [Unreleased]
+
+## [0.2.0] - 2025-11-01
+
+### Added
+- Add `aws-s3-flex` driver (phase 1 parity with `aws-s3`) — an opt-in alternative S3 driver for future flexibility.
+- Centralize S3 helpers: moved S3-specific helpers to `src/drivers/aws-s3/shared.ts` and generic utilities to `src/utils.ts` (includes `streamToString`, `filterKeyByDepth`, `checkReadOnly`).
+- Expose `./aws-s3-flex` subpath in package exports.
+
+### Breaking
+- Remove backward-compatible alias exports `toStorageKey`, `normalizeKey`, and `joinKey` in favor of explicit S3-specific helpers (`toS3StorageKey`, `normalizeS3Key`, `joinS3Key`). This is a breaking change and will be released in the next major version. Update any code that imports the old aliases to use the new names.
+- Rename `awsS3DriverOptions` to `AwsS3DriverOptions` (capitalized) — this is a breaking type name change. Update any TypeScript imports to use `AwsS3DriverOptions`.

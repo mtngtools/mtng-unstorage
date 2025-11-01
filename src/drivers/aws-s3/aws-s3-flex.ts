@@ -3,7 +3,7 @@ import { defineDriver } from 'unstorage';
 import type { AwsS3DriverOptions, S3PutObjectOptions } from './types';
 import { toS3StorageKey, joinS3Key, validateS3Options } from './shared.js';
 import { filterKeyByDepth, checkReadOnly, streamToString } from '../../utils.js';
-import { AWS_S3_DRIVER_NAME } from './types.js';
+import { AWS_S3_FLEX_DRIVER_NAME } from './types.js';
 
 /*
  * AWS S3 storage driver for unstorage
@@ -16,7 +16,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
     bucket,
     s3StoragePrefix = '',
     base = '',
-    name = AWS_S3_DRIVER_NAME, //aws-s3
+    name = AWS_S3_FLEX_DRIVER_NAME, //aws-s3-flex
     readOnly = false,
     allowClear = false
   } = options;
@@ -27,7 +27,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
 
   async function hasItem(key: string, _opts: any): Promise<boolean> {
     try {
-        const Key = toS3StorageKey(key, { base, s3StoragePrefix });
+      const Key = toS3StorageKey(key, { base, s3StoragePrefix });
       const command = new (await import('@aws-sdk/client-s3')).HeadObjectCommand({
         Bucket: bucket,
         Key
@@ -45,7 +45,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
 
   async function getItem(key: string, _opts?: any): Promise<any> {
     try {
-        const Key = toS3StorageKey(key, { base, s3StoragePrefix });
+      const Key = toS3StorageKey(key, { base, s3StoragePrefix });
       const command = new (await import('@aws-sdk/client-s3')).GetObjectCommand({
         Bucket: bucket,
         Key
@@ -71,7 +71,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
   async function setItem(key: string, value: string, opts?: { s3Options?: S3PutObjectOptions }): Promise<void> {
     checkReadOnly(readOnly, 'setItem');
     
-      const Key = toS3StorageKey(key, { base, s3StoragePrefix });
+    const Key = toS3StorageKey(key, { base, s3StoragePrefix });
 
     const putObjectParams: PutObjectCommandInput = {
       Bucket: bucket,
@@ -132,7 +132,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
             let key = object.Key!;
             
             // Remove s3StoragePrefix if present
-        if (s3StoragePrefix && key.startsWith(s3StoragePrefix)) {
+            if (s3StoragePrefix && key.startsWith(s3StoragePrefix)) {
               key = key.slice(s3StoragePrefix.length);
               if (key.startsWith('/')) {
                 key = key.slice(1);
