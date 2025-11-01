@@ -1,10 +1,8 @@
-import type {
-  S3Client,
-  PutObjectCommandInput
-} from '@aws-sdk/client-s3';
+import type { PutObjectCommandInput } from '@aws-sdk/client-s3';
 import { defineDriver } from 'unstorage';
 import { validateKey } from '../../utils.js';
 import type { MTBaseDriverOptions } from '../../types';
+import type { SharedAwsS3DriverOptions } from './types';
 
 /**
  * Custom type for additional S3 PutObject parameters
@@ -57,23 +55,7 @@ function joinKey(base: string | undefined, key: string): string {
 /**
  * Configuration options for the S3 storage driver
  */
-export type awsS3DriverOptions  = MTBaseDriverOptions & {
-  /**
-   * AWS S3 client instance
-   */
-  s3Client: S3Client
-  
-  /**
-   * S3 bucket name
-   */
-  bucket: string
-  
-  /**
-   * Optional S3 storage prefix for all keys in the bucket
-   */
-  s3StoragePrefix?: string
-  
-}
+export type awsS3DriverOptions = MTBaseDriverOptions & SharedAwsS3DriverOptions;
 
 /**
  * Converts a storage key to an S3 object key using the provided options

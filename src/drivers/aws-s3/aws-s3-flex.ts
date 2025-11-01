@@ -1,14 +1,6 @@
-import type { MTBaseDriverOptions } from '../../types';
+import type { AwsS3FlexDriverOptions } from './types';
 import awsS3Driver from './aws-s3.js';
 import { toStorageKey as _toStorageKey } from './aws-s3.js';
-
-/**
- * Flex driver options extend the base driver options for future expansion.
- * Currently empty — phase 1 keeps parity with the basic driver.
- */
-export type AwsS3FlexDriverOptions = MTBaseDriverOptions & {
-  // Future extension point for flex features
-}
 
 export function toStorageKey(key: string, opts: { base?: string; s3StoragePrefix?: string } = {}): string {
   // Re-export the same helper for parity with the basic driver

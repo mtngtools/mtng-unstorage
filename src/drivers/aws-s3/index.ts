@@ -3,3 +3,4 @@ export { default as AwsS3FlexDriver, AwsS3FlexDriver as AwsS3Flex } from './aws-
 
 // Re-export helpers from basic driver for convenience
 export * from './aws-s3.js';
+export * from './types';
