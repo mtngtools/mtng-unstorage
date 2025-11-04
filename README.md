@@ -74,6 +74,13 @@ console.log(user) // { name: 'John', email: 'john@example.com' }
 - **[All Drivers Overview](./docs/drivers/README.md)** - Comparison and overview of all drivers
 - **[AWS S3 Driver](./docs/drivers/aws-s3.md)** - Complete AWS S3 driver documentation
 
+### Agent guidance
+
+- Organization-wide agent guidance: [`AGENTS_ORGANIZATION.md`](./AGENTS_ORGANIZATION.md)
+- TypeScript-specific agent guidance: [`AGENTS_TYPESCRIPT.md`](./AGENTS_TYPESCRIPT.md)
+- Repo-level agent guidance (minimal): [`AGENTS_REPO.md`](./AGENTS_REPO.md)
+- Package-specific agent guidance: [`AGENTS.md`](./AGENTS.md)
+
 ## Testing
 
 ```bash
