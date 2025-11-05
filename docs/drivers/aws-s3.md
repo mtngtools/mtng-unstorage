@@ -22,20 +22,37 @@ pnpm install @mtng/unstorage @aws-sdk/client-s3 unstorage
 
 ```typescript
 import { createStorage } from 'unstorage'
+import { awsS3Driver } from '@mtng/unstorage'
+
+// Create storage with an internally constructed S3 client
+// Region and credentials are resolved by the AWS SDK default chain, or you can pass them inline
+const storage = createStorage({
+  driver: awsS3Driver({
+    bucket: 'my-storage-bucket',
+    // Optional inline config:
+    // region: 'us-east-1',
+    // accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    // secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    // sessionToken: process.env.AWS_SESSION_TOKEN,
+  })
+})
+```
+
+### Using a shared S3 client
+
+When you want to reuse a single client instance across multiple storages, customize middleware/HTTP handlers, or manage retries globally, pass a pre-constructed S3Client:
+
+```typescript
+import { createStorage } from 'unstorage'
 import { S3Client } from '@aws-sdk/client-s3'
 import { awsS3Driver } from '@mtng/unstorage'
 
-// Create S3 client (add region and credentials if not available from environment)
-const s3Client = new S3Client({})
+const s3Client = new S3Client({ region: 'us-east-1' })
 
-// Create storage instance
 const storage = createStorage({
-  driver: awsS3Driver({
-    s3Client,
-    bucket: 'my-storage-bucket'
-  })
+  driver: awsS3Driver({ s3Client, bucket: 'my-storage-bucket' })
 })
-
+```
 // Basic operations
 await storage.setItem('user:123', { name: 'John', email: 'john@example.com' })
 const user = await storage.getItem('user:123')
@@ -49,12 +66,18 @@ await storage.removeItem('user:123')
 ```typescript
 interface AwsS3DriverOptions extends MTBaseDriverOptions {
   // Required
-  s3Client: S3Client            // AWS S3 client instance
   bucket: string                // S3 bucket name
-  
+
   // Optional S3-specific
+  s3Client?: S3Client           // Provide to reuse/customize a shared client
   s3StoragePrefix?: string      // Global S3 storage prefix for all keys
-  
+
+  // Optional inline AWS config (used only when s3Client is not provided)
+  region?: string
+  accessKeyId?: string
+  secretAccessKey?: string
+  sessionToken?: string
+
   // Inherited from MTBaseDriverOptions
   base?: string                 // Base path for this driver instance
   name?: string                 // Driver name (default: 'aws-s3')
@@ -62,6 +85,8 @@ interface AwsS3DriverOptions extends MTBaseDriverOptions {
   allowClear?: boolean          // Allow clear operations (default: false)
 }
 ```
+
+Note: If any inline credential is provided, both accessKeyId and secretAccessKey are required. If omitted, the AWS SDK default credential provider chain is used.
 
 ### Understanding `base` vs `s3StoragePrefix`
 

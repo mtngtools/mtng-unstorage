@@ -5,19 +5,36 @@ import { AWS_S3_DRIVER_NAME } from './types.js';
 import type { S3Client } from '@aws-sdk/client-s3';
 
 // Mock the AWS SDK
-const mockS3Client = {
-  send: vi.fn()
-} as unknown as S3Client;
+// Hoist mocks to satisfy Vitest's hoisting behavior
+const { mockS3ClientObj, mockS3ClientCtor } = vi.hoisted(() => {
+  const mockObj = { send: vi.fn() } as unknown as S3Client;
+  return {
+    mockS3ClientObj: mockObj,
+    // Use function expression so it can be used with `new`
+    mockS3ClientCtor: vi.fn(function (_opts?: any) { return mockObj as any; })
+  }
+});
 
-// Mock the AWS SDK commands
-const mockHeadObjectCommand = vi.fn();
-const mockGetObjectCommand = vi.fn();
-const mockPutObjectCommand = vi.fn();
-const mockDeleteObjectCommand = vi.fn();
-const mockListObjectsV2Command = vi.fn();
+// Hoist command constructor mocks as well
+const { 
+  mockHeadObjectCommand,
+  mockGetObjectCommand,
+  mockPutObjectCommand,
+  mockDeleteObjectCommand,
+  mockListObjectsV2Command
+} = vi.hoisted(() => {
+  return {
+    mockHeadObjectCommand: vi.fn(),
+    mockGetObjectCommand: vi.fn(),
+    mockPutObjectCommand: vi.fn(),
+    mockDeleteObjectCommand: vi.fn(),
+    mockListObjectsV2Command: vi.fn()
+  }
+});
 
 vi.mock('@aws-sdk/client-s3', async () => {
   return {
+  S3Client: mockS3ClientCtor,
     HeadObjectCommand: mockHeadObjectCommand,
     GetObjectCommand: mockGetObjectCommand,
     PutObjectCommand: mockPutObjectCommand,
@@ -28,7 +45,7 @@ vi.mock('@aws-sdk/client-s3', async () => {
 
 describe('S3 Driver', () => {
   const defaultOptions = {
-    s3Client: mockS3Client,
+    s3Client: mockS3ClientObj,
     bucket: 'test-bucket',
     s3StoragePrefix: 'test-prefix/',
     name: 'test-s3',
@@ -45,11 +62,11 @@ describe('S3 Driver', () => {
       expect(driver.name).toBe('test-s3')
     })
 
-    it('should throw error if client is missing', () => {
-      expect(() => awsS3Driver({
-        ...defaultOptions,
-        s3Client: null as any
-      })).toThrow('S3Client instance is required')
+    it('should construct an internal S3 client when s3Client is missing', () => {
+      const { s3Client, ...opts } = defaultOptions as any
+      const driver = awsS3Driver(opts)
+      expect(driver.name).toBe('test-s3')
+      expect(mockS3ClientCtor).toHaveBeenCalled()
     })
 
     it('should throw error if bucket is missing', () => {
@@ -61,17 +78,44 @@ describe('S3 Driver', () => {
 
     it('should use default name if not provided', () => {
       const driver = awsS3Driver({
-        s3Client: mockS3Client,
+        s3Client: mockS3ClientObj,
         bucket: 'test-bucket'
       })
   expect(driver.name).toBe(AWS_S3_DRIVER_NAME)
+    })
+
+    it('should pass inline credentials to constructed S3 client', () => {
+      const { s3Client, ...opts } = defaultOptions as any
+      mockS3ClientCtor.mockClear()
+      awsS3Driver({
+        ...(opts as any),
+        s3Client: undefined,
+        region: 'us-east-1',
+        accessKeyId: 'AKIA_TEST',
+        secretAccessKey: 'SECRET',
+        sessionToken: 'TOKEN'
+      })
+      expect(mockS3ClientCtor).toHaveBeenCalledWith({
+        region: 'us-east-1',
+        credentials: {
+          accessKeyId: 'AKIA_TEST',
+          secretAccessKey: 'SECRET',
+          sessionToken: 'TOKEN'
+        }
+      })
+    })
+
+    it('should throw if only one of accessKeyId or secretAccessKey is provided', () => {
+      const { s3Client, ...opts } = defaultOptions as any
+      expect(() => awsS3Driver({ ...(opts as any), accessKeyId: 'AKIA_ONLY' as any })).toThrow('Both accessKeyId and secretAccessKey are required when providing inline credentials')
+      expect(() => awsS3Driver({ ...(opts as any), secretAccessKey: 'SECRET_ONLY' as any })).toThrow('Both accessKeyId and secretAccessKey are required when providing inline credentials')
     })
   })
 
   describe('hasItem', () => {
     it('should return true when object exists', async () => {
-      mockS3Client.send = vi.fn().mockResolvedValue({})
-      const driver = awsS3Driver(defaultOptions)
+  mockS3ClientObj.send = vi.fn().mockResolvedValue({})
+  const driver = awsS3Driver(defaultOptions)
       
       const result = await driver.hasItem('test-key', {})
       
@@ -85,9 +129,9 @@ describe('S3 Driver', () => {
     it('should return false when object does not exist', async () => {
       const notFoundError = new Error('Not Found')
       notFoundError.name = 'NotFound'
-      mockS3Client.send = vi.fn().mockRejectedValue(notFoundError)
+  mockS3ClientObj.send = vi.fn().mockRejectedValue(notFoundError)
       
-      const driver = awsS3Driver(defaultOptions)
+  const driver = awsS3Driver(defaultOptions)
       const result = await driver.hasItem('test-key', {})
       
       expect(result).toBe(false)
@@ -96,9 +140,9 @@ describe('S3 Driver', () => {
     it('should return false when 404 status code', async () => {
       const notFoundError = new Error('Not Found')
       ;(notFoundError as any).$metadata = { httpStatusCode: 404 }
-      mockS3Client.send = vi.fn().mockRejectedValue(notFoundError)
+  mockS3ClientObj.send = vi.fn().mockRejectedValue(notFoundError)
       
-      const driver = awsS3Driver(defaultOptions)
+  const driver = awsS3Driver(defaultOptions)
       const result = await driver.hasItem('test-key', {})
       
       expect(result).toBe(false)
@@ -106,7 +150,7 @@ describe('S3 Driver', () => {
 
     it('should throw other errors', async () => {
       const error = new Error('Access Denied')
-      mockS3Client.send = vi.fn().mockRejectedValue(error)
+  mockS3ClientObj.send = vi.fn().mockRejectedValue(error)
       
       const driver = awsS3Driver(defaultOptions)
       
@@ -119,7 +163,7 @@ describe('S3 Driver', () => {
       const mockBody = {
         transformToString: vi.fn().mockResolvedValue('{"test":"value"}')
       }
-      mockS3Client.send = vi.fn().mockResolvedValue({ Body: mockBody })
+  mockS3ClientObj.send = vi.fn().mockResolvedValue({ Body: mockBody })
       
       const driver = awsS3Driver(defaultOptions)
       const result = await driver.getItem('test-key')
@@ -135,7 +179,7 @@ describe('S3 Driver', () => {
       const mockBody = {
         transformToString: vi.fn().mockResolvedValue('plain text')
       }
-      mockS3Client.send = vi.fn().mockResolvedValue({ Body: mockBody })
+  mockS3ClientObj.send = vi.fn().mockResolvedValue({ Body: mockBody })
       
       const driver = awsS3Driver(defaultOptions)
       const result = await driver.getItem('test-key')
@@ -146,7 +190,7 @@ describe('S3 Driver', () => {
     it('should return null when object does not exist', async () => {
       const notFoundError = new Error('No Such Key')
       notFoundError.name = 'NoSuchKey'
-      mockS3Client.send = vi.fn().mockRejectedValue(notFoundError)
+  mockS3ClientObj.send = vi.fn().mockRejectedValue(notFoundError)
       
       const driver = awsS3Driver(defaultOptions)
       const result = await driver.getItem('test-key')
@@ -155,7 +199,7 @@ describe('S3 Driver', () => {
     })
 
     it('should return null when body is empty', async () => {
-      mockS3Client.send = vi.fn().mockResolvedValue({ Body: null })
+  mockS3ClientObj.send = vi.fn().mockResolvedValue({ Body: null })
       
       const driver = awsS3Driver(defaultOptions)
       const result = await driver.getItem('test-key')
@@ -175,7 +219,7 @@ describe('S3 Driver', () => {
         })
       }
       
-      mockS3Client.send = vi.fn().mockResolvedValue({ Body: mockStream })
+  mockS3ClientObj.send = vi.fn().mockResolvedValue({ Body: mockStream })
       
       const driver = awsS3Driver(defaultOptions)
       const result = await driver.getItem('test-key')
@@ -186,7 +230,7 @@ describe('S3 Driver', () => {
 
   describe('setItem', () => {
     it('should store JSON serialized value', async () => {
-      mockS3Client.send = vi.fn().mockResolvedValue({})
+  mockS3ClientObj.send = vi.fn().mockResolvedValue({})
       
       const driver = awsS3Driver(defaultOptions)
       await driver.setItem!('test-key', '{"test":"value"}', {})
@@ -199,7 +243,7 @@ describe('S3 Driver', () => {
     })
 
     it('should store string value as-is', async () => {
-      mockS3Client.send = vi.fn().mockResolvedValue({})
+  mockS3ClientObj.send = vi.fn().mockResolvedValue({})
       
       const driver = awsS3Driver(defaultOptions)
       await driver.setItem!('test-key', 'plain text', {})
@@ -212,7 +256,7 @@ describe('S3 Driver', () => {
     })
 
     it('should pass custom S3 options to PutObjectCommand', async () => {
-      mockS3Client.send = vi.fn().mockResolvedValue({})
+  mockS3ClientObj.send = vi.fn().mockResolvedValue({})
       
       const driver = awsS3Driver(defaultOptions)
       await driver.setItem!('test-key', 'test content', {
@@ -244,7 +288,7 @@ describe('S3 Driver', () => {
 
   describe('removeItem', () => {
     it('should delete object from S3', async () => {
-      mockS3Client.send = vi.fn().mockResolvedValue({})
+      mockS3ClientObj.send = vi.fn().mockResolvedValue({})
       
       const driver = awsS3Driver(defaultOptions)
       await driver.removeItem!('test-key', {})
@@ -258,7 +302,7 @@ describe('S3 Driver', () => {
 
   describe('getKeys', () => {
     it('should return list of keys', async () => {
-      mockS3Client.send = vi.fn().mockResolvedValue({
+  mockS3ClientObj.send = vi.fn().mockResolvedValue({
         Contents: [
           { Key: 'test-prefix/key1' },
           { Key: 'test-prefix/key2' },
@@ -278,7 +322,7 @@ describe('S3 Driver', () => {
     })
 
     it('should handle pagination', async () => {
-      mockS3Client.send = vi.fn()
+      mockS3ClientObj.send = vi.fn()
         .mockResolvedValueOnce({
           Contents: [{ Key: 'test-prefix/key1' }],
           NextContinuationToken: 'token123'
@@ -291,11 +335,11 @@ describe('S3 Driver', () => {
       const keys = await driver.getKeys('', {})
       
       expect(keys).toEqual(['key1', 'key2'])
-      expect(mockS3Client.send).toHaveBeenCalledTimes(2)
+  expect(mockS3ClientObj.send).toHaveBeenCalledTimes(2)
     })
 
     it('should filter by base prefix', async () => {
-      mockS3Client.send = vi.fn().mockResolvedValue({
+  mockS3ClientObj.send = vi.fn().mockResolvedValue({
         Contents: [
           { Key: 'test-prefix/base/key1' },
           { Key: 'test-prefix/base/key2' }
@@ -314,7 +358,7 @@ describe('S3 Driver', () => {
     })
 
     it('should support maxDepth filtering', async () => {
-      mockS3Client.send = vi.fn().mockResolvedValue({
+  mockS3ClientObj.send = vi.fn().mockResolvedValue({
         Contents: [
           { Key: 'test-prefix/depth0' },
           { Key: 'test-prefix/depth0/file1' },
@@ -353,7 +397,7 @@ describe('S3 Driver', () => {
   describe('clear', () => {
     it('should delete all keys', async () => {
       // Mock ListObjectsV2Command to return some keys
-      mockS3Client.send = vi.fn()
+      mockS3ClientObj.send = vi.fn()
         .mockResolvedValueOnce({
           Contents: [
             { Key: 'test-s3-prefix/test-base/key1' },
@@ -367,14 +411,14 @@ describe('S3 Driver', () => {
       await driver.clear!('', {})
       
       // Should call ListObjectsV2Command once and DeleteObjectCommand 3 times
-      expect(mockS3Client.send).toHaveBeenCalledTimes(4)
+  expect(mockS3ClientObj.send).toHaveBeenCalledTimes(4)
     })
 
     it('should handle large number of keys in batches', async () => {
       const manyKeys = Array.from({ length: 250 }, (_, i) => ({ Key: `test-s3-prefix/test-base/key${i}` }))
       
       // Mock ListObjectsV2Command to return many keys
-      mockS3Client.send = vi.fn()
+      mockS3ClientObj.send = vi.fn()
         .mockResolvedValueOnce({
           Contents: manyKeys
         })
@@ -384,13 +428,13 @@ describe('S3 Driver', () => {
       await driver.clear!('', {})
       
       // Should call ListObjectsV2Command once and DeleteObjectCommand 250 times
-      expect(mockS3Client.send).toHaveBeenCalledTimes(251)
+  expect(mockS3ClientObj.send).toHaveBeenCalledTimes(251)
     })
   })
 
   describe('key normalization', () => {
     it('should normalize keys with base path', async () => {
-      mockS3Client.send = vi.fn().mockResolvedValue({})
+  mockS3ClientObj.send = vi.fn().mockResolvedValue({})
       
       const driver = awsS3Driver({
         ...defaultOptions,
@@ -452,7 +496,7 @@ describe('S3 Driver', () => {
         })
       }
       
-      mockS3Client.send = vi.fn()
+      mockS3ClientObj.send = vi.fn()
         .mockResolvedValueOnce({
           Body: mockStream
         })
@@ -470,7 +514,7 @@ describe('S3 Driver', () => {
     })
 
     it('should allow write operations when readOnly is false or undefined', async () => {
-      mockS3Client.send = vi.fn().mockResolvedValue({})
+  mockS3ClientObj.send = vi.fn().mockResolvedValue({})
       
       const driver = awsS3Driver(defaultOptions) // readOnly is false/undefined
       
@@ -503,7 +547,7 @@ describe('S3 Driver', () => {
     })
 
     it('should allow clear when allowClear is true', async () => {
-      mockS3Client.send = vi.fn().mockResolvedValue({})
+  mockS3ClientObj.send = vi.fn().mockResolvedValue({})
       
       const driver = awsS3Driver(defaultOptions) // allowClear is true
       

@@ -12,9 +12,9 @@ export type MTFlexDriverOptions = MTBaseDriverOptions;
  */
 export type SharedAwsS3DriverOptions = {
   /**
-   * AWS S3 client instance
+   * AWS S3 client instance. If omitted, the driver will construct one.
    */
-  s3Client: S3Client;
+  s3Client?: S3Client;
 
   /**
    * S3 bucket name
@@ -25,6 +25,18 @@ export type SharedAwsS3DriverOptions = {
    * Optional S3 storage prefix for all keys in the bucket
    */
   s3StoragePrefix?: string;
+
+  /**
+   * Optional region to use when constructing an internal S3Client
+   */
+  region?: string;
+
+  /**
+   * Optional inline AWS credentials when constructing an internal S3Client
+   */
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  sessionToken?: string;
 }
 
 /**

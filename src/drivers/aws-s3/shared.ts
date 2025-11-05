@@ -49,7 +49,11 @@ export function toS3StorageKey(key: string, options: { base?: string, s3StorageP
  */
 export type S3DriverOptionsMinimal = {
   s3Client?: any;
-  bucket?: string;
+  bucket?: string | undefined;
+  region?: string | undefined;
+  accessKeyId?: string | undefined;
+  secretAccessKey?: string | undefined;
+  sessionToken?: string | undefined;
 };
 
 /**
@@ -57,10 +61,14 @@ export type S3DriverOptionsMinimal = {
  * Accepts a single options object to allow evolving the signature in future.
  */
 export function validateS3Options(opts: S3DriverOptionsMinimal): void {
-  if (!opts || !opts.s3Client) {
-    throw new Error('S3Client instance is required');
-  }
-  if (!opts.bucket) {
+  if (!opts || !opts.bucket) {
     throw new Error('S3 bucket name is required');
+  }
+  // If any inline credential field is provided, ensure we have at least accessKeyId and secretAccessKey
+  const hasAnyCredField = Boolean(opts.accessKeyId || opts.secretAccessKey || opts.sessionToken);
+  if (hasAnyCredField) {
+    if (!opts.accessKeyId || !opts.secretAccessKey) {
+      throw new Error('Both accessKeyId and secretAccessKey are required when providing inline credentials');
+    }
   }
 }
