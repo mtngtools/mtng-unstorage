@@ -1,8 +1,7 @@
 import type { PutObjectCommandInput } from '@aws-sdk/client-s3';
-import { S3Client } from '@aws-sdk/client-s3';
 import { defineDriver } from 'unstorage';
 import type { AwsS3DriverOptions, S3PutObjectOptions } from './types';
-import { toS3StorageKey, joinS3Key, validateS3Options } from './shared.js';
+import { toS3StorageKey, joinS3Key, validateS3Options, createS3Client } from './shared.js';
 import { filterKeyByDepth, checkReadOnly, streamToString } from '../../utils.js';
 import { AWS_S3_FLEX_DRIVER_NAME } from './types.js';
 
@@ -26,19 +25,22 @@ export default defineDriver((options: AwsS3DriverOptions) => {
     sessionToken,
   } = options;
 
-  validateS3Options({ s3Client, bucket, region, accessKeyId, secretAccessKey, sessionToken });
-
-  // Build client if not provided
-  const client = s3Client ?? new S3Client({
+  const validated = validateS3Options({
+    ...(s3Client ? { s3Client } : {}),
+    bucket,
+    s3StoragePrefix,
+    base,
+    name,
+    readOnly,
+    allowClear,
     ...(region ? { region } : {}),
-    ...((accessKeyId && secretAccessKey) ? {
-      credentials: {
-        accessKeyId,
-        secretAccessKey,
-        ...(sessionToken ? { sessionToken } : {})
-      }
-    } : {})
+    ...(accessKeyId ? { accessKeyId } : {}),
+    ...(secretAccessKey ? { secretAccessKey } : {}),
+    ...(sessionToken ? { sessionToken } : {}),
   });
+
+  // Build client if not provided using shared helper
+  const client = createS3Client(validated);
 
   // Using shared helpers from driver-local `./shared.ts` and general `utils.ts`
 
@@ -50,7 +52,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
         Key
       });
       
-  await (client as S3Client).send(command);
+  await client.send(command);
       return true;
     } catch (error: any) {
       if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
@@ -68,7 +70,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
         Key
       });
       
-  const response = await (client as S3Client).send(command);
+  const response = await client.send(command);
       
       if (!response.Body) {
         return null;
@@ -98,7 +100,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
     };
     
     const command = new (await import('@aws-sdk/client-s3')).PutObjectCommand(putObjectParams);
-  await (client as S3Client).send(command);
+  await client.send(command);
   }
 
   async function removeItem(key: string, _opts: any): Promise<void> {
@@ -110,7 +112,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
       Key
     });
     
-  await (client as S3Client).send(command);
+  await client.send(command);
   }
 
   async function getKeys(basePrefix: string, opts: any): Promise<string[]> {
@@ -141,7 +143,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
       }
       
       const command = new (await import('@aws-sdk/client-s3')).ListObjectsV2Command(commandParams);
-  const response = await (client as S3Client).send(command);
+  const response = await client.send(command);
       
       if (response.Contents) {
         for (const object of response.Contents) {

@@ -62,3 +62,22 @@ export default {} as const;
  */
 export const AWS_S3_DRIVER_NAME = 'aws-s3' as const;
 export const AWS_S3_FLEX_DRIVER_NAME = 'aws-s3-flex' as const;
+
+/**
+ * Validated S3 driver options returned by validateS3Options.
+ * Assumes drivers set defaults before validation, so formerly-optional
+ * fields (base, name, readOnly, allowClear, s3StoragePrefix) are present.
+ */
+export type ValidatedAWSS3DriverOptions = {
+  s3Client?: S3Client;
+  bucket: string;
+  s3StoragePrefix: string;
+  base: string;
+  name: string;
+  readOnly: boolean;
+  allowClear: boolean;
+  region?: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  sessionToken?: string;
+};
