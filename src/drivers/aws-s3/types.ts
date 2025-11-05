@@ -1,4 +1,4 @@
-import type { MTBaseDriverOptions } from '../../types';
+import type { MTBaseDriverOptions, AwsRegionAndCredentials } from '../../types';
 import type { S3Client, PutObjectCommandInput } from '@aws-sdk/client-s3';
 
 /**
@@ -10,11 +10,20 @@ export type MTFlexDriverOptions = MTBaseDriverOptions;
 /**
  * Shared S3-specific options used by both the basic and flex drivers.
  */
-export type SharedAwsS3DriverOptions = {
+/**
+ * Shared AWS S3 options used by both drivers.
+ *
+ * Credentials rules (enforced at type level via discriminated union):
+ * - Either provide both accessKeyId and secretAccessKey (sessionToken optional),
+ *   or provide none of these three fields.
+ * - Supplying only one of accessKeyId/secretAccessKey is disallowed.
+ * - Supplying sessionToken without the pair is disallowed.
+ */
+type SharedAwsS3DriverOptionsBase = {
   /**
-   * AWS S3 client instance
+   * AWS S3 client instance. If omitted, the driver will construct one.
    */
-  s3Client: S3Client;
+  s3Client?: S3Client;
 
   /**
    * S3 bucket name
@@ -25,7 +34,9 @@ export type SharedAwsS3DriverOptions = {
    * Optional S3 storage prefix for all keys in the bucket
    */
   s3StoragePrefix?: string;
-}
+};
+
+export type SharedAwsS3DriverOptions = SharedAwsS3DriverOptionsBase & AwsRegionAndCredentials;
 
 /**
  * Flex driver options: MTFlexDriverOptions + S3-specific shared options.
@@ -50,3 +61,22 @@ export default {} as const;
  */
 export const AWS_S3_DRIVER_NAME = 'aws-s3' as const;
 export const AWS_S3_FLEX_DRIVER_NAME = 'aws-s3-flex' as const;
+
+/**
+ * Validated S3 driver options returned by validateS3Options.
+ * Assumes drivers set defaults before validation, so formerly-optional
+ * fields (base, name, readOnly, allowClear, s3StoragePrefix) are present.
+ */
+export type ValidatedAWSS3DriverOptions = {
+  s3Client?: S3Client;
+  bucket: string;
+  s3StoragePrefix: string;
+  base: string;
+  name: string;
+  readOnly: boolean;
+  allowClear: boolean;
+  region?: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  sessionToken?: string;
+};

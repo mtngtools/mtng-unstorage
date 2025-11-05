@@ -3,19 +3,35 @@ import awsS3FlexDriver from './aws-s3-flex.js';
 import type { S3Client } from '@aws-sdk/client-s3';
 import { toS3StorageKey } from './shared.js';
 
-// Reuse the same mocks as the basic driver tests
-const mockS3Client = {
-  send: vi.fn()
-} as unknown as S3Client;
+// Hoisted mocks to satisfy Vitest's hoisting behavior
+const { mockS3ClientObj, mockS3ClientCtor } = vi.hoisted(() => {
+  const mockObj = { send: vi.fn() } as unknown as S3Client;
+  return {
+    mockS3ClientObj: mockObj,
+    // Use function expression so it can be used with `new`
+    mockS3ClientCtor: vi.fn(function (_opts?: any) { return mockObj as any; })
+  }
+});
 
-const mockHeadObjectCommand = vi.fn();
-const mockGetObjectCommand = vi.fn();
-const mockPutObjectCommand = vi.fn();
-const mockDeleteObjectCommand = vi.fn();
-const mockListObjectsV2Command = vi.fn();
+const {
+  mockHeadObjectCommand,
+  mockGetObjectCommand,
+  mockPutObjectCommand,
+  mockDeleteObjectCommand,
+  mockListObjectsV2Command
+} = vi.hoisted(() => {
+  return {
+    mockHeadObjectCommand: vi.fn(),
+    mockGetObjectCommand: vi.fn(),
+    mockPutObjectCommand: vi.fn(),
+    mockDeleteObjectCommand: vi.fn(),
+    mockListObjectsV2Command: vi.fn()
+  }
+});
 
 vi.mock('@aws-sdk/client-s3', async () => {
   return {
+    S3Client: mockS3ClientCtor,
     HeadObjectCommand: mockHeadObjectCommand,
     GetObjectCommand: mockGetObjectCommand,
     PutObjectCommand: mockPutObjectCommand,
@@ -26,7 +42,7 @@ vi.mock('@aws-sdk/client-s3', async () => {
 
 describe('S3 Flex Driver (phase1 parity)', () => {
   const defaultOptions = {
-    s3Client: mockS3Client,
+    s3Client: mockS3ClientObj,
     bucket: 'test-bucket',
     s3StoragePrefix: 'test-prefix/',
     name: 'test-s3-flex',

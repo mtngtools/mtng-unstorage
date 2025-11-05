@@ -23,6 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- S3 drivers now accept optional `s3Client`; when omitted, the driver constructs an internal `S3Client` using the AWS SDK default provider chain.
+- Support for optional inline AWS configuration when constructing an internal client: `region`, `accessKeyId`, `secretAccessKey`, and `sessionToken`.
+
+### Changed
+- Relax validation: `s3Client` is no longer required. Bucket name is still required. If any inline credential is provided, both `accessKeyId` and `secretAccessKey` must be set.
+
 ## [0.2.0] - 2025-11-01
 
 ### Added

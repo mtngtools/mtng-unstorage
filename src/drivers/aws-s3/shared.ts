@@ -1,4 +1,6 @@
 import { validateKey } from '../../utils.js';
+import { S3Client } from '@aws-sdk/client-s3';
+import type { AwsS3DriverOptions, ValidatedAWSS3DriverOptions } from './types.js';
 
 /*
  * NOTE: The old backward-compatible aliases (normalizeKey, joinKey, toStorageKey)
@@ -49,18 +51,65 @@ export function toS3StorageKey(key: string, options: { base?: string, s3StorageP
  */
 export type S3DriverOptionsMinimal = {
   s3Client?: any;
-  bucket?: string;
+  bucket?: string | undefined;
+  region?: string | undefined;
+  accessKeyId?: string | undefined;
+  secretAccessKey?: string | undefined;
+  sessionToken?: string | undefined;
 };
 
 /**
  * Validate required S3 options (client and bucket) and throw helpful errors.
  * Accepts a single options object to allow evolving the signature in future.
  */
-export function validateS3Options(opts: S3DriverOptionsMinimal): void {
-  if (!opts || !opts.s3Client) {
-    throw new Error('S3Client instance is required');
-  }
-  if (!opts.bucket) {
+export function validateS3Options(
+  opts: (AwsS3DriverOptions & {
+    s3StoragePrefix: string;
+    base: string;
+    name: string;
+    readOnly: boolean;
+    allowClear: boolean;
+  })
+): ValidatedAWSS3DriverOptions {
+  if (!opts || !opts.bucket) {
     throw new Error('S3 bucket name is required');
   }
+  const hasAnyCredField = Boolean(opts.accessKeyId || opts.secretAccessKey || opts.sessionToken);
+  if (hasAnyCredField) {
+    if (!opts.accessKeyId || !opts.secretAccessKey) {
+      throw new Error('Both accessKeyId and secretAccessKey are required when providing inline credentials');
+    }
+  }
+
+  // Return normalized/validated options with required fields present
+  return {
+    ...(opts.s3Client ? { s3Client: opts.s3Client } : {}),
+    bucket: opts.bucket,
+    s3StoragePrefix: opts.s3StoragePrefix,
+    base: opts.base,
+    name: opts.name,
+    readOnly: opts.readOnly,
+    allowClear: opts.allowClear,
+    ...(opts.region ? { region: opts.region } : {}),
+    ...(opts.accessKeyId ? { accessKeyId: opts.accessKeyId } : {}),
+    ...(opts.secretAccessKey ? { secretAccessKey: opts.secretAccessKey } : {}),
+    ...(opts.sessionToken ? { sessionToken: opts.sessionToken } : {}),
+  } as ValidatedAWSS3DriverOptions;
+}
+
+/**
+ * Create or return an S3Client from validated options.
+ */
+export function createS3Client(opts: ValidatedAWSS3DriverOptions): S3Client {
+  if (opts.s3Client) return opts.s3Client as S3Client;
+  return new S3Client({
+    ...(opts.region ? { region: opts.region } : {}),
+    ...((opts.accessKeyId && opts.secretAccessKey) ? {
+      credentials: {
+        accessKeyId: opts.accessKeyId,
+        secretAccessKey: opts.secretAccessKey,
+        ...(opts.sessionToken ? { sessionToken: opts.sessionToken } : {})
+      }
+    } : {})
+  });
 }

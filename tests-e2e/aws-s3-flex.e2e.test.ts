@@ -17,6 +17,7 @@ describe('AWS S3 FLEX Driver E2E Tests', () => {
   const testBucket = process.env.AWS_S3_TEST_BUCKET || 'test-bucket-not-set';
   const baseTestPrefix = process.env.AWS_S3_TEST_PREFIX || 'test-mtng-unstorage-e2e/';
   const testPrefix = `${baseTestPrefix}aws-s3-flex/`;
+  const hasInlineCreds = Boolean(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
 
   beforeEach(async () => {
     if (!isE2EEnabled) {
@@ -103,6 +104,41 @@ describe('AWS S3 FLEX Driver E2E Tests', () => {
     for (const testCase of testCases) {
       await storage.removeItem(testCase.key)
     }
+  })
+
+  it.skipIf(!isE2EEnabled || !hasInlineCreds)('should work when credentials are provided inline to flex driver', async () => {
+    const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
+    const accessKeyId = process.env.AWS_ACCESS_KEY_ID!;
+    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY!;
+    const sessionToken = process.env.AWS_SESSION_TOKEN;
+
+    const inlineStorage = createStorage({
+      driver: awsS3FlexDriver({
+        bucket: testBucket,
+        s3StoragePrefix: testPrefix + 'inline-creds/',
+        allowClear: true,
+        ...(region ? { region } : {}),
+        accessKeyId,
+        secretAccessKey,
+        ...(sessionToken ? { sessionToken } : {})
+      })
+    });
+
+    // Clean up any existing test data under this prefix
+    await inlineStorage.clear();
+
+    const key = 'inline-auth-test';
+    const value = { ok: true, t: Date.now() };
+
+    expect(await inlineStorage.hasItem(key)).toBe(false);
+    await inlineStorage.setItem(key, value);
+    expect(await inlineStorage.hasItem(key)).toBe(true);
+    expect(await inlineStorage.getItem(key)).toEqual(value);
+    await inlineStorage.removeItem(key);
+    expect(await inlineStorage.hasItem(key)).toBe(false);
+
+    // Final cleanup
+    await inlineStorage.clear();
   })
 
   it.skipIf(!isE2EEnabled)('should list keys correctly', async () => {
