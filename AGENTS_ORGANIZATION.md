@@ -44,7 +44,14 @@ Agent behavior—organization rules
 --------------------------------
 
 - Agents must be conservative: prefer making small commits and open PRs rather than direct pushes to default branches.
-- Agents should run the minimal verification steps before pushing changes: typecheck → lint → build → unit tests.
+- Commit & PR gating: do not commit or push code changes until BOTH of the following are true:
+  1. The local prepublish pipeline has succeeded (either run the repository's `prepublishOnly` script, or run the equivalent sequence: typecheck → lint → build → unit tests).
+  2. A human maintainer has explicitly approved committing/pushing (for example: a comment like "go ahead and commit/push" or an approved PR review). If a maintainer says "don't commit", do not commit. Keep changes in the working tree or as staged diffs only.
+- Commit message policy (code changes): every commit that changes code (non-docs-only) must reference the GitHub issue it affects. Use one of the following patterns at the end of the message:
+  - "Addresses #<issue>" or "Refs #<issue>" for ongoing work that should not auto-close the issue.
+  - "Closes #<issue>" only when the commit definitively resolves the issue and auto-closing is desired.
+  - When multiple issues are impacted, list each reference on its own line.
+- Feature branches are allowed locally for isolation, but do not push them or open PRs until the above gating conditions are met, unless a maintainer explicitly asks for a draft PR for review.
 - Any release or tag creation should be coordinated and follow the organization's release checklist; prefer creating PRs that include release notes rather than creating tags directly from agents.
 - Do not start work on features or bug fixes if:
   - you are on the `main` branch or another protected branch
