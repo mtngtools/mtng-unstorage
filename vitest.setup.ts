@@ -1,17 +1,3 @@
-import { vi } from 'vitest';
-
-// Mock AWS SDK for unit tests
-vi.mock('@aws-sdk/client-s3', () => {
-  const mockS3Client = {
-    send: vi.fn()
-  };
-
-  return {
-    S3Client: vi.fn(() => mockS3Client),
-    GetObjectCommand: vi.fn(),
-    PutObjectCommand: vi.fn(),
-    DeleteObjectCommand: vi.fn(),
-    HeadObjectCommand: vi.fn(),
-    ListObjectsV2Command: vi.fn()
-  };
-});
+// Global test setup placeholder. Avoid global AWS SDK mocks here because
+// individual test files provide targeted mocks (and some tests rely on
+// custom mock implementations like MockS3Client with constructor inputs).

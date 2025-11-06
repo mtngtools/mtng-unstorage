@@ -1,65 +1,141 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
+import { MockS3Client } from '../../../tests/helpers/mock-s3.js';
 import awsS3FlexDriver from './aws-s3-flex.js';
-import type { S3Client } from '@aws-sdk/client-s3';
-import { toS3StorageKey } from './shared.js';
+import awsS3Driver from './aws-s3.js';
+import { createStorage } from 'unstorage';
+import { joinS3Key } from './shared.js';
 
-// Hoisted mocks to satisfy Vitest's hoisting behavior
-const { mockS3ClientObj, mockS3ClientCtor } = vi.hoisted(() => {
-  const mockObj = { send: vi.fn() } as unknown as S3Client;
-  return {
-    mockS3ClientObj: mockObj,
-    // Use function expression so it can be used with `new`
-    mockS3ClientCtor: vi.fn(function (_opts?: any) { return mockObj as any; })
-  }
+// NOTE: Common driver contract tests for flex are now covered in
+// aws-s3-common.test.ts. This file is intentionally limited to 
+// scenarios unique to the flex driver.
+
+describe('aws-s3-flex flex only scenarios', () => {
+
+  it('custom mapper replaces middle section with "replaced" and is consistent', async () => {
+    const bucket = 'test-bucket'
+
+    // Custom mapping: collapse everything between the first and last segment
+    // into a single literal 'replaced'
+    const toStorageKey = (key: string, _opts: any) => {
+      const parts = key.split(':')
+      if (parts.length <= 2) return key
+      return `${parts[0]}:replaced:${parts[parts.length - 1]}`
+    }
+
+    const fromStorageKey = (s3Key: string, _opts: any) => {
+      // Map S3 key back to the original long consumer-visible key by
+      // restoring the known middle section used by our test fixture.
+      const parts = s3Key.split(':')
+      if (parts.length <= 2) return s3Key
+      const middle = 'long:section:that:is:always:the:same'
+      return `${parts[0]}:${middle}:${parts[parts.length - 1]}`
+    }
+
+    const mockClient = new MockS3Client()
+
+    const baseStorage = createStorage({
+      driver: awsS3Driver({
+        s3Client: (mockClient as any),
+        bucket,
+        s3StoragePrefix: '',
+        base: '',
+        name: 'aws-s3-base',
+        allowClear: true
+      })
+    })
+
+    const flexStorage = createStorage({
+      driver: awsS3FlexDriver({
+        s3Client: (mockClient as any),
+        bucket,
+        s3StoragePrefix: '',
+        base: '',
+        name: 'aws-s3-flex',
+        allowClear: true,
+        toStorageKey,
+        fromStorageKey
+      })
+    })
+
+    await baseStorage.clear();
+    await flexStorage.clear();
+    (mockClient as any).storage.clear()
+
+    const originalKey = 'part1:long:section:that:is:always:the:same:part2'
+    const reducedKey = 'part1:replaced:part2'
+    const value = { foo: 'bar' }
+
+    await flexStorage.setItem(originalKey, value)
+
+    expect(await baseStorage.hasItem(reducedKey)).toBe(true)
+    expect(await baseStorage.getItem(reducedKey)).toEqual(value)
+
+    expect(await flexStorage.getItem(originalKey)).toEqual(value)
+
+    await flexStorage.removeItem(originalKey)
+    expect(await baseStorage.hasItem(reducedKey)).toBe(false)
+  })
+
+  it('custom mapper works with a different begin/end tokens (alpha/omega)', async () => {
+    const bucket = 'test-bucket'
+
+    const toStorageKey = (key: string, opts: any) => {
+      const parts = key.split(':')
+      if (parts.length <= 2) return key
+      const mappedKey = `${parts[0]}:replaced:${parts[parts.length - 1]}`;
+      return joinS3Key(opts.fullBasePrefix, mappedKey);
+    }
+
+    const fromStorageKey = (s3Key: string, _opts: any) => {
+      const parts = s3Key.split(':')
+      if (parts.length <= 2) return s3Key
+      const middle = 'long:section:that:is:always:the:same'
+      return `${parts[0]}:${middle}:${parts[parts.length - 1]}`
+    }
+
+    const mockClient = new MockS3Client()
+
+    const baseStorage = createStorage({
+      driver: awsS3Driver({
+        s3Client: (mockClient as any),
+        bucket,
+        s3StoragePrefix: '',
+        base: '',
+        name: 'aws-s3-base',
+        allowClear: true
+      })
+    })
+
+    const flexStorage = createStorage({
+      driver: awsS3FlexDriver({
+        s3Client: (mockClient as any),
+        bucket,
+        s3StoragePrefix: '',
+        base: '',
+        name: 'aws-s3-flex',
+        allowClear: true,
+        toStorageKey,
+        fromStorageKey
+      })
+    })
+
+    await baseStorage.clear();
+    await flexStorage.clear();
+    (mockClient as any).storage.clear()
+
+    const originalKey = 'alpha:long:section:that:is:always:the:same:omega'
+    const reducedKey = 'alpha:replaced:omega'
+    const value = { baz: 'qux' }
+
+    await flexStorage.setItem(originalKey, value)
+
+    expect(await baseStorage.hasItem(reducedKey)).toBe(true)
+    expect(await baseStorage.getItem(reducedKey)).toEqual(value)
+
+    expect(await flexStorage.getItem(originalKey)).toEqual(value)
+
+    await flexStorage.removeItem(originalKey)
+    expect(await baseStorage.hasItem(reducedKey)).toBe(false)
+  })
+
 });
-
-const {
-  mockHeadObjectCommand,
-  mockGetObjectCommand,
-  mockPutObjectCommand,
-  mockDeleteObjectCommand,
-  mockListObjectsV2Command
-} = vi.hoisted(() => {
-  return {
-    mockHeadObjectCommand: vi.fn(),
-    mockGetObjectCommand: vi.fn(),
-    mockPutObjectCommand: vi.fn(),
-    mockDeleteObjectCommand: vi.fn(),
-    mockListObjectsV2Command: vi.fn()
-  }
-});
-
-vi.mock('@aws-sdk/client-s3', async () => {
-  return {
-    S3Client: mockS3ClientCtor,
-    HeadObjectCommand: mockHeadObjectCommand,
-    GetObjectCommand: mockGetObjectCommand,
-    PutObjectCommand: mockPutObjectCommand,
-    DeleteObjectCommand: mockDeleteObjectCommand,
-    ListObjectsV2Command: mockListObjectsV2Command
-  }
-})
-
-describe('S3 Flex Driver (phase1 parity)', () => {
-  const defaultOptions = {
-    s3Client: mockS3ClientObj,
-    bucket: 'test-bucket',
-    s3StoragePrefix: 'test-prefix/',
-    name: 'test-s3-flex',
-    allowClear: true
-  }
-
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('should create driver with valid options', () => {
-    const driver = awsS3FlexDriver(defaultOptions as any)
-    expect(driver.name).toBe('test-s3-flex')
-  })
-
-  it('toS3StorageKey should behave like basic driver', () => {
-    expect(toS3StorageKey('test-key', {})).toBe('test-key')
-    expect(toS3StorageKey('/test-key/', { s3StoragePrefix: '/storage/' })).toBe('storage/test-key')
-  })
-})

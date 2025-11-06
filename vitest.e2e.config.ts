@@ -10,6 +10,7 @@ const env = {
 // Vitest config for E2E tests - no AWS SDK mocking
 export default defineConfig({
   test: {
+    include: ['tests-e2e/**/*.e2e.test.ts', 'tests/e2e/**/*.e2e.test.ts'],
     globals: true,
     environment: 'node',
     setupFiles: ['./vitest.setup.e2e.ts'],

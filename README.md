@@ -67,6 +67,12 @@ const user = await storage.getItem('user:123')
 console.log(user) // { name: 'John', email: 'john@example.com' }
 ```
 
+Notes about recent driver changes:
+
+- Prefer `storagePrefix` (driver option) for S3 prefixing; the driver still accepts the legacy `s3StoragePrefix` but canonicalizes it to `storagePrefix`.
+- The driver validator computes and exposes `fullBasePrefix` (the joined `storagePrefix` + `base`) which the driver uses to build S3 keys. If you provide custom mapping functions, they now receive the validated options object as a second parameter so you can access `fullBasePrefix`.
+- You can pass a pre-constructed `s3Client` to reuse a client instance, or omit it and provide inline `region`/`accessKeyId`/`secretAccessKey`/`sessionToken` — the driver will construct an S3 client for you when needed.
+
 ## Documentation
 
 ### Driver Documentation
@@ -98,7 +104,131 @@ For E2E testing setup, see the specific driver documentation.
 
 ## API Reference
 
-For detailed API documentation, see [API Reference](./docs/api-reference.md).
+# @mtngtools/unstorage
+
+A TypeScript library providing storage drivers for [unstorage](https://github.com/unjs/unstorage). These drivers extend unstorage with implementations (like AWS S3 via the official SDK) and planned advanced features around key/value mapping and versioning.
+
+[![npm version](https://badge.fury.io/js/@mtngtools%2Funstorage.svg)](https://badge.fury.io/js/@mtngtools%2Funstorage)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Drivers
+
+### Current
+- **[AWS S3 Driver](./docs/drivers/aws-s3.md)** – Uses the AWS SDK v3 instead of the HTTP API built into unstorage.
+
+### Planned
+- AWS DynamoDB Driver
+- AWS Systems Manager Parameter Store Driver
+
+### Planned Driver Features
+- Custom key mapping (to/from storage key)
+- Custom value mapping (to/from storage value)
+- Auto-versioned writes (retain timestamped immutable copies)
+- Load prior version by timestamp
+
+## Features
+
+- 🚀 **TypeScript First** – Rich types & helper utilities
+- 🔧 **Extra Capabilities** – Read-only mode, clear protection, maxDepth filtering
+- 🧪 **Tested** – Unit + (gated) E2E suites
+- 📦 **Tree‑shakeable** – Published as ESM + CJS with type declarations
+- 🔒 **Type Safe** – Strict option validation & exported types
+
+## Installation
+
+```bash
+pnpm install @mtngtools/unstorage
+```
+
+Peer deps for S3:
+
+```bash
+pnpm install @aws-sdk/client-s3 unstorage
+```
+
+## Quick Start (AWS S3)
+
+```typescript
+import { createStorage } from 'unstorage'
+import { S3Client } from '@aws-sdk/client-s3'
+import { awsS3Driver } from '@mtngtools/unstorage'
+
+const s3Client = new S3Client({}) // add region/credentials if not via env
+
+const storage = createStorage({
+   driver: awsS3Driver({
+      s3Client,
+      bucket: 'my-storage-bucket'
+   })
+})
+
+await storage.setItem('user:123', { name: 'John', email: 'john@example.com' })
+const user = await storage.getItem('user:123')
+console.log(user)
+```
+
+### Recent Driver Notes
+- Prefer `storagePrefix`; legacy `s3StoragePrefix` is still accepted then canonicalized.
+- Validator exposes `fullBasePrefix` (joined `storagePrefix` + `base`). Custom mappers receive validated options so you can use it.
+- Provide an existing S3 client or let the driver construct one with inline credentials (`region`, `accessKeyId`, `secretAccessKey`, optional `sessionToken`).
+
+## Documentation
+
+- **[All Drivers Overview](./docs/drivers/README.md)**
+- **[AWS S3 Driver](./docs/drivers/aws-s3.md)**
+- **[API Reference](./docs/api-reference.md)**
+
+### Agent Guidance
+- Organization: [`AGENTS_ORGANIZATION.md`](./AGENTS_ORGANIZATION.md)
+- TypeScript: [`AGENTS_TYPESCRIPT.md`](./AGENTS_TYPESCRIPT.md)
+- Repo-level: [`AGENTS_REPO.md`](./AGENTS_REPO.md)
+- Package-specific: [`AGENTS.md`](./AGENTS.md)
+
+## Testing
+
+Core scripts:
+```bash
+pnpm test              # Unit tests
+pnpm test:verbose      # Verbose reporter
+pnpm test:min          # Dot/minimal reporter
+pnpm test:ui           # Interactive UI mode
+pnpm test:coverage     # Unit test coverage
+pnpm test:e2e          # E2E tests (requires env setup)
+```
+
+### E2E Setup (S3)
+E2E tests are gated and require:
+1. AWS credentials (CLI config, env vars, or credentials file)
+2. A test S3 bucket
+3. Environment config
+
+Recommended (environment file):
+```bash
+cp .env.test .env.test.local
+echo 'AWS_S3_E2E_ENABLED=true' >> .env.test.local
+echo 'AWS_S3_TEST_BUCKET=your-bucket' >> .env.test.local
+echo 'AWS_S3_TEST_PREFIX=test-$(whoami)-' >> .env.test.local
+pnpm test:e2e
+```
+
+Or set variables directly:
+```bash
+export AWS_S3_E2E_ENABLED=true
+export AWS_S3_TEST_BUCKET=your-bucket
+export AWS_S3_TEST_PREFIX=test-mtng-unstorage-e2e/
+# Optional if not in shared config
+# export AWS_REGION=us-east-1
+pnpm test:e2e
+```
+
+Environment file load order (highest wins):
+- `.env.test.local`
+- `.env.test`
+
+Security:
+- Never commit credentials
+- Use a unique prefix (`AWS_S3_TEST_PREFIX`) to isolate and simplify cleanup
 
 ## License
 
@@ -112,90 +242,5 @@ MIT © [Jason Bulson](https://github.com/jbulson)
 
 ## Related Projects
 
-- [unstorage](https://github.com/unjs/unstorage) - Universal Storage Layer
-- [AWS SDK for JavaScript](https://github.com/aws/aws-sdk-js-v3)
-
-## Testing
-
-### Running Tests
-
-```bash
-# Unit tests only
-pnpm test
-
-# Unit tests (explicit command)
-pnpm run test:unit
-
-# E2E tests (using environment files - recommended)
-pnpm run test:e2e
-
-# E2E tests (using environment variables)
-AWS_S3_E2E_ENABLED=true AWS_S3_TEST_BUCKET=test-bucket AWS_S3_TEST_PREFIX=test-prefix/ pnpm run test:e2e
-
-# With coverage
-pnpm run test:coverage
-```
-
-### E2E Test Setup
-
-To run E2E tests, you need:
-
-1. **AWS credentials configured** (via AWS CLI, credentials file, or environment variables)
-2. **An S3 bucket for testing**
-3. **Environment configuration** (choose one of the options below)
-
-#### Option 1: Environment File (Recommended)
-
-1. Copy the template:
-   ```bash
-   cp .env.test .env.test.local
-   ```
-
-2. Configure your local settings in `.env.test.local`:
-   ```bash
-   AWS_S3_E2E_ENABLED=true
-   AWS_S3_TEST_BUCKET=your-actual-test-bucket
-   AWS_S3_TEST_PREFIX=test-$(whoami)-
-   ```
-
-3. Run tests:
-   ```bash
-   pnpm run test:e2e
-   ```
-
-#### Option 2: Environment Variables
-
-Set environment variables directly:
-
-```bash
-export AWS_S3_E2E_ENABLED=true
-export AWS_S3_TEST_BUCKET=your-test-bucket
-export AWS_S3_TEST_PREFIX=test-mtng-unstorage-e2e/
-# Optional: AWS_REGION (if not configured in AWS credentials/config)
-# export AWS_REGION=us-east-1
-```
-
-#### Environment File Priority
-
-Vite loads environment files in this order (higher priority overrides lower):
-- `.env.test.local` (git-ignored, your personal settings)
-- `.env.test` (committed, safe defaults for the team)
-
-**Security Note:** 
-- Never commit AWS credentials to `.env.test`
-- Use `.env.test.local` for your personal configuration
-- The `AWS_S3_TEST_PREFIX` helps isolate test data and makes cleanup easier
-
-## License
-
-MIT © [Jason Bulson](https://github.com/jbulson)
-
-## Support
-
-- 📝 [Issues](https://github.com/mtngtools/mtng-unstorage/issues)
-- 💬 [Discussions](https://github.com/mtngtools/mtng-unstorage/discussions)
-
-## Related Projects
-
-- [unstorage](https://github.com/unjs/unstorage) - Universal Storage Layer
+- [unstorage](https://github.com/unjs/unstorage)
 - [AWS SDK for JavaScript](https://github.com/aws/aws-sdk-js-v3)

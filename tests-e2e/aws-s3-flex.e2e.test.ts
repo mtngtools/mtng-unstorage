@@ -1,329 +1,65 @@
 /**
- * E2E test suite for the AWS S3 FLEX driver.
- *
- * This mirrors `tests-e2e/aws-s3.e2e.test.ts` but uses the `aws-s3-flex` driver.
- * The tests are skipped by default unless `AWS_S3_E2E_ENABLED=true` is set in the env.
+ * E2E tests for aws-s3-flex driver using JSON extension mapping helpers.
+ * Gated by AWS_S3_E2E_ENABLED=true. Uses storagePrefix suffix isolation.
  */
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createStorage } from 'unstorage';
 import awsS3FlexDriver from '../src/drivers/aws-s3/aws-s3-flex';
-import { S3Client } from '@aws-sdk/client-s3';
+import { S3Client, HeadObjectCommand } from '@aws-sdk/client-s3';
+import { joinS3Key, toS3KeyWithJSONExt, fromS3KeyWithJSONExt } from '../src/drivers/aws-s3/shared';
 
-describe('AWS S3 FLEX Driver E2E Tests', () => {
+const isE2EEnabled = process.env.AWS_S3_E2E_ENABLED === 'true';
+const d = isE2EEnabled ? describe : describe.skip;
+
+const bucket = process.env.AWS_S3_TEST_BUCKET || 'test-bucket-not-set';
+const baseStoragePrefix = process.env.AWS_S3_TEST_PREFIX || 'test-mtng-unstorage-e2e';
+const TEST_NS = `it-flex-json-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+const storagePrefix = `${String(baseStoragePrefix).replace(/\/+$/, '')}/${TEST_NS}`;
+const base = 'aws-s3-flex/';
+
+d('[e2e] AWS S3 FLEX Driver JSON mapping', () => {
   let storage: ReturnType<typeof createStorage>;
   let s3Client: S3Client;
-
-  const isE2EEnabled = process.env.AWS_S3_E2E_ENABLED === 'true';
-  const testBucket = process.env.AWS_S3_TEST_BUCKET || 'test-bucket-not-set';
-  const baseTestPrefix = process.env.AWS_S3_TEST_PREFIX || 'test-mtng-unstorage-e2e/';
-  const testPrefix = `${baseTestPrefix}aws-s3-flex/`;
-  const hasInlineCreds = Boolean(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
+  let fullBasePrefix: string;
 
   beforeEach(async () => {
-    if (!isE2EEnabled) {
-      return;
-    }
-
     const region = process.env.AWS_REGION;
-
-    s3Client = new S3Client({
-      region
-    });
+    s3Client = new S3Client({ region });
 
     storage = createStorage({
       driver: awsS3FlexDriver({
         s3Client,
-        bucket: testBucket,
-        s3StoragePrefix: testPrefix,
-        allowClear: true
+        bucket,
+        storagePrefix,
+        base,
+        allowClear: true,
+        toStorageKey: (key, resolved, req) => toS3KeyWithJSONExt(key, { fullBasePrefix: resolved.fullBasePrefix }, req),
+        fromStorageKey: (key, resolved, req) => fromS3KeyWithJSONExt(key, { fullBasePrefix: resolved.fullBasePrefix }, req),
       })
     });
 
-    // Clean up any existing test data
-    await storage.clear();
+    // Mirror fullBasePrefix joining used by driver
+    fullBasePrefix = joinS3Key(storagePrefix, base);
+
+    // Clean scope
+    await storage.clear('');
   });
 
   afterEach(async () => {
-    if (!isE2EEnabled || !storage) {
-      return;
-    }
-
-    // Clean up test data
-    await storage.clear();
+    if (!storage) return;
+    await storage.clear('');
   });
 
-  it.skipIf(!isE2EEnabled)('should perform basic CRUD operations', async () => {
-    const testKey = 'test-key'
-    const testValue = { message: 'Hello, World!', timestamp: Date.now() }
+  it('use custom key mapping to roundtrip with .json extension', async () => {
+    const logicalKey = 'user:123';
+    const value = { hello: 'world' };
 
-    // Initially should not exist
-    expect(await storage.hasItem(testKey)).toBe(false)
-    expect(await storage.getItem(testKey)).toBe(null)
+    await storage.setItem(logicalKey, value);
+    await expect(storage.hasItem(logicalKey)).resolves.toBe(true);
+    await expect(storage.getItem(logicalKey)).resolves.toEqual(value);
 
-    // Set item
-    await storage.setItem(testKey, testValue)
+    await storage.removeItem(logicalKey);
+    await expect(storage.hasItem(logicalKey)).resolves.toBe(false);
+  });
 
-    // Should now exist
-    expect(await storage.hasItem(testKey)).toBe(true)
-
-    // Get item should return the same value
-    const retrieved = await storage.getItem(testKey)
-    expect(retrieved).toEqual(testValue)
-
-    // Remove item
-    await storage.removeItem(testKey)
-
-    // Should no longer exist
-    expect(await storage.hasItem(testKey)).toBe(false)
-    expect(await storage.getItem(testKey)).toBe(null)
-  })
-
-  it.skipIf(!isE2EEnabled)('should handle different data types', async () => {
-    const testCases = [
-      { key: 'string-value', value: 'simple string' },
-      { key: 'number-value', value: 42 },
-      { key: 'boolean-value', value: true },
-      { key: 'object-value', value: { nested: { data: 'test' } } },
-      { key: 'array-value', value: [1, 2, 3, 'four'] },
-      { key: 'null-value', value: null },
-      { key: 'empty-string', value: '' }
-    ]
-
-    // Set all values
-    for (const testCase of testCases) {
-      await storage.setItem(testCase.key, testCase.value)
-    }
-
-    // Verify all values
-    for (const testCase of testCases) {
-      const retrieved = await storage.getItem(testCase.key)
-      expect(retrieved).toEqual(testCase.value)
-    }
-
-    // Clean up
-    for (const testCase of testCases) {
-      await storage.removeItem(testCase.key)
-    }
-  })
-
-  it.skipIf(!isE2EEnabled || !hasInlineCreds)('should work when credentials are provided inline to flex driver', async () => {
-    const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
-    const accessKeyId = process.env.AWS_ACCESS_KEY_ID!;
-    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY!;
-    const sessionToken = process.env.AWS_SESSION_TOKEN;
-
-    const inlineStorage = createStorage({
-      driver: awsS3FlexDriver({
-        bucket: testBucket,
-        s3StoragePrefix: testPrefix + 'inline-creds/',
-        allowClear: true,
-        ...(region ? { region } : {}),
-        accessKeyId,
-        secretAccessKey,
-        ...(sessionToken ? { sessionToken } : {})
-      })
-    });
-
-    // Clean up any existing test data under this prefix
-    await inlineStorage.clear();
-
-    const key = 'inline-auth-test';
-    const value = { ok: true, t: Date.now() };
-
-    expect(await inlineStorage.hasItem(key)).toBe(false);
-    await inlineStorage.setItem(key, value);
-    expect(await inlineStorage.hasItem(key)).toBe(true);
-    expect(await inlineStorage.getItem(key)).toEqual(value);
-    await inlineStorage.removeItem(key);
-    expect(await inlineStorage.hasItem(key)).toBe(false);
-
-    // Final cleanup
-    await inlineStorage.clear();
-  })
-
-  it.skipIf(!isE2EEnabled)('should list keys correctly', async () => {
-    const testData = {
-      'key1': 'value1',
-      'key2': 'value2',
-      'folder/key3': 'value3',
-      'folder/subfolder/key4': 'value4'
-    }
-
-    // Set test data
-    for (const [key, value] of Object.entries(testData)) {
-      await storage.setItem(key, value)
-    }
-
-    // Get all keys
-    const allKeys = await storage.getKeys()
-    // Note: unstorage normalizes '/' to ':' in keys
-    const expectedKeys = ['key1', 'key2', 'folder:key3', 'folder:subfolder:key4']
-    expect(allKeys.sort()).toEqual(expectedKeys.sort())
-
-    // Get keys with prefix
-    const folderKeys = await storage.getKeys('folder')
-    expect(folderKeys.sort()).toEqual(['folder:key3', 'folder:subfolder:key4'].sort())
-
-    // Clean up
-    for (const key of Object.keys(testData)) {
-      await storage.removeItem(key)
-    }
-  })
-
-  it.skipIf(!isE2EEnabled)('should clear all items', async () => {
-    const testData = {
-      'clear-test-1': 'value1',
-      'clear-test-2': 'value2',
-      'clear-test-3': 'value3'
-    }
-
-    // Set test data
-    for (const [key, value] of Object.entries(testData)) {
-      await storage.setItem(key, value)
-    }
-
-    // Verify data exists
-    const keysBeforeClear = await storage.getKeys()
-    expect(keysBeforeClear.length).toBeGreaterThanOrEqual(3)
-
-    // Clear all
-    await storage.clear()
-
-    // Verify all data is gone
-    const keysAfterClear = await storage.getKeys()
-    expect(keysAfterClear).toEqual([])
-
-    // Verify individual items are gone
-    for (const key of Object.keys(testData)) {
-      expect(await storage.hasItem(key)).toBe(false)
-    }
-  })
-
-  it.skipIf(!isE2EEnabled)('should handle large values', async () => {
-    const largeObject = {
-      data: 'x'.repeat(10000), // 10KB string
-      numbers: Array.from({ length: 1000 }, (_, i) => i),
-      nested: {
-        level1: {
-          level2: {
-            level3: {
-              value: 'deeply nested'
-            }
-          }
-        }
-      }
-    }
-
-    const testKey = 'large-object'
-
-    await storage.setItem(testKey, largeObject)
-
-    const retrieved = await storage.getItem(testKey)
-    expect(retrieved).toEqual(largeObject)
-
-    await storage.removeItem(testKey)
-    expect(await storage.hasItem(testKey)).toBe(false)
-  })
-
-  it.skipIf(!isE2EEnabled)('should handle concurrent operations', async () => {
-    const concurrentOperations = Array.from({ length: 10 }, (_, i) => ({
-      key: `concurrent-${i}`,
-      value: { index: i, timestamp: Date.now() }
-    }))
-
-    // Set all values concurrently
-    await Promise.all(
-      concurrentOperations.map(({ key, value }) => 
-        storage.setItem(key, value)
-      )
-    )
-
-    // Get all values concurrently
-    const results = await Promise.all(
-      concurrentOperations.map(({ key }) => 
-        storage.getItem(key)
-      )
-    )
-
-    // Verify all results
-    results.forEach((result, index) => {
-      expect(result).not.toBe(null)
-      expect(typeof result).toBe('object')
-      expect((result as any).index).toBe(index)
-      expect(typeof (result as any).timestamp).toBe('number')
-    })
-
-    // Clean up concurrently
-    await Promise.all(
-      concurrentOperations.map(({ key }) => 
-        storage.removeItem(key)
-      )
-    )
-
-    // Verify cleanup
-    const hasResults = await Promise.all(
-      concurrentOperations.map(({ key }) => 
-        storage.hasItem(key)
-      )
-    )
-
-    expect(hasResults.every(has => has === false)).toBe(true)
-  })
-
-  it.skipIf(!isE2EEnabled)('should work with custom content type and encryption', async () => {
-    const customStorage = createStorage({
-      driver: awsS3FlexDriver({
-        s3Client,
-        bucket: testBucket,
-        s3StoragePrefix: testPrefix + 'custom/'
-      })
-    })
-
-    const testKey = 'custom-options-test'
-    const testValue = 'plain text value'
-
-    await customStorage.setItem(testKey, testValue)
-
-    const retrieved = await customStorage.getItem(testKey)
-    expect(retrieved).toBe(testValue)
-
-    await customStorage.removeItem(testKey)
-  })
-
-  it.skipIf(!isE2EEnabled)('should support maxDepth filtering', async () => {
-    const testData = {
-      'depth0': 'value0',
-      'depth0/file1': 'value1',
-      'depth0/sub1/file2': 'value2',
-      'depth0/sub1/sub2/file3': 'value3',
-      'depth0/sub1/sub2/sub3/file4': 'value4'
-    }
-
-    // Set test data
-    for (const [key, value] of Object.entries(testData)) {
-      await storage.setItem(key, value)
-    }
-
-    // Test maxDepth: 0 (only top-level keys)
-    const depth0Keys = await storage.getKeys(undefined, { maxDepth: 0 })
-    expect(depth0Keys).toContain('depth0')
-    expect(depth0Keys.filter(k => k.includes(':'))).toHaveLength(0)
-
-    // Test maxDepth: 1 (up to 1 level deep)
-    const depth1Keys = await storage.getKeys(undefined, { maxDepth: 1 })
-    expect(depth1Keys).toContain('depth0')
-    expect(depth1Keys).toContain('depth0:file1')
-    expect(depth1Keys.filter(k => (k.match(/:/g) || []).length > 1)).toHaveLength(0)
-
-    // Test maxDepth: 2 (up to 2 levels deep)
-    const depth2Keys = await storage.getKeys(undefined, { maxDepth: 2 })
-    expect(depth2Keys).toContain('depth0:sub1:file2')
-    expect(depth2Keys.filter(k => (k.match(/:/g) || []).length > 2)).toHaveLength(0)
-
-    // Clean up
-    for (const key of Object.keys(testData)) {
-      await storage.removeItem(key)
-    }
-  })
-
-})
+});

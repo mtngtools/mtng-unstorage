@@ -16,8 +16,7 @@
       "types": "./dist/drivers/aws-s3/aws-s3.d.ts",
       "import": "./dist/drivers/aws-s3/aws-s3.js",
       "require": "./dist/drivers/aws-s3/aws-s3.cjs"
-    }
-    ,
+    },
     "./aws-s3-flex": {
       "types": "./dist/drivers/aws-s3/aws-s3-flex.d.ts",
       "import": "./dist/drivers/aws-s3/aws-s3-flex.js",
@@ -31,8 +30,13 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite build --watch",
-  "test": "vitest run",
-  "test:e2e": "VITEST_POOL_THREADS=false NODE_ENV=test vitest run tests-e2e --config vitest.e2e.config.ts",
+    "test": "vitest run",
+    "test:verbose": "vitest run --reporter=verbose",
+    "test:ui": "vitest --ui",
+    "test:min": "vitest run --reporter=dot",
+    "test:e2e": "VITEST_POOL_THREADS=false NODE_ENV=test vitest run tests-e2e --config vitest.e2e.config.ts",
+    "test:e2e:ui": "vitest tests-e2e --ui --config vitest.e2e.config.ts",
+    "test:all": "pnpm run test && pnpm run test:e2e",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
@@ -65,9 +69,10 @@
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.922.0",
     "@eslint/js": "^9.39.0",
-  "@types/node": "^20.19.24",
+    "@types/node": "^20.19.24",
     "@typescript-eslint/parser": "^8.46.2",
-  "@vitest/coverage-v8": "^4.0.6",
+    "@vitest/coverage-v8": "^4.0.6",
+    "@vitest/ui": "4.0.6",
     "eslint": "^9.39.0",
     "typescript": "^5.9.3",
     "unstorage": "^1.17.2",
