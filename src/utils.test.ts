@@ -1,9 +1,72 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { validateKey } from './utils.js';
+import { validateKey, encodeValueToJSONIfObject, decodeJSONIfApplicable } from './utils.js';
 import { filterKeyByDepth, checkReadOnly, streamToString } from './utils.js';
 
 describe('Utils', () => {
   // removed legacy serialize/deserialize tests
+
+  describe('encodeValueToJSONIfObject', () => {
+    it('encodes primitives via String()', () => {
+      expect(encodeValueToJSONIfObject('test')).toBe('test')
+      expect(encodeValueToJSONIfObject(null)).toBe('null')
+      expect(encodeValueToJSONIfObject(undefined)).toBe('undefined')
+      expect(encodeValueToJSONIfObject(42)).toBe('42')
+      expect(encodeValueToJSONIfObject(true)).toBe('true')
+      expect(encodeValueToJSONIfObject(false)).toBe('false')
+    })
+
+    it('JSON stringifies objects and arrays', () => {
+      const obj = { a: 1 }
+      const arr = [1, 2, 3]
+      expect(encodeValueToJSONIfObject(obj)).toBe(JSON.stringify(obj))
+      expect(encodeValueToJSONIfObject(arr)).toBe(JSON.stringify(arr))
+    })
+
+    it('respects custom toJSON implementations', () => {
+      const v1 = { toJSON: () => 'SER' }
+      const v2 = { toJSON: () => ({ x: 1 }) }
+      expect(encodeValueToJSONIfObject(v1)).toBe('SER')
+      expect(encodeValueToJSONIfObject(v2)).toBe(JSON.stringify({ x: 1 }))
+    })
+  })
+
+  describe('decodeJSONIfApplicable', () => {
+    it('parses JSON strings and passes through non-JSON strings', () => {
+      expect(decodeJSONIfApplicable('{"x":1}')).toEqual({ x: 1 })
+      expect(decodeJSONIfApplicable('[1,2]')).toEqual([1, 2])
+      expect(decodeJSONIfApplicable('not json')).toBe('not json')
+    })
+
+    it('returns non-string inputs as-is', () => {
+      const obj = { a: 1 }
+      expect(decodeJSONIfApplicable(obj)).toBe(obj)
+      expect(decodeJSONIfApplicable(123 as any)).toBe(123)
+      expect(decodeJSONIfApplicable(true as any)).toBe(true)
+      expect(decodeJSONIfApplicable(null as any)).toBe(null)
+      expect(decodeJSONIfApplicable(undefined as any)).toBe(undefined)
+    })
+  })
+
+  describe('encode/decode roundtrip', () => {
+    it('roundtrips common primitives, arrays, and objects', () => {
+      const cases: any[] = [
+        'string',
+        123,
+        true,
+        false,
+        null,
+        undefined,
+        { a: 1, b: 'two', c: [3, 4] },
+        [1, 'two', { three: 3 }],
+      ]
+
+      for (const original of cases) {
+        const encoded = encodeValueToJSONIfObject(original)
+        const decoded = decodeJSONIfApplicable(encoded)
+        expect(decoded).toEqual(original)
+      }
+    })
+  })
 
   describe('validateKey', () => {
     it('should accept valid keys', () => {

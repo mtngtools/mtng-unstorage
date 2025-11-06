@@ -31,8 +31,8 @@ function isPureObject(value: any): boolean {
  */
 export function encodeValueToJSONIfObject(value: unknown): string {
   if (isPrimitive(value)) return String(value);
-  if (isPureObject(value) || Array.isArray(value)) return JSON.stringify(value);
   if (typeof (value as any)?.toJSON === 'function') return encodeValueToJSONIfObject((value as any).toJSON());
+  if (isPureObject(value) || Array.isArray(value)) return JSON.stringify(value);
   return String(value as any);
 }
 
