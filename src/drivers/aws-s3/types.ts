@@ -43,18 +43,18 @@ export type SharedAwsS3DriverOptions = SharedAwsS3DriverOptionsBase & AwsRegionA
 /**
  * Flex driver options: MTFlexDriverOptions + S3-specific shared options.
  */
-export type AwsS3FlexDriverOptions = MTFlexDriverOptions & SharedAwsS3DriverOptions;
+export type AwsS3FlexDriverOptions = Prettify<MTFlexDriverOptions & SharedAwsS3DriverOptions>;
 
 /**
  * Custom type for additional S3 PutObject parameters
  * Excludes Bucket, Key, and Body which are set by the driver
  */
-export type S3PutObjectOptions = Omit<PutObjectCommandInput, 'Bucket' | 'Key' | 'Body'>;
+export type S3PutObjectOptions = Prettify<Omit<PutObjectCommandInput, 'Bucket' | 'Key' | 'Body'>>
 
 /**
  * Configuration options for the S3 storage driver
  */
-export type AwsS3DriverOptions = MTBaseDriverOptions & SharedAwsS3DriverOptions;
+export type AwsS3DriverOptions = Prettify<MTBaseDriverOptions & SharedAwsS3DriverOptions>;
 
 export default {} as const;
 
