@@ -11,22 +11,16 @@ export { default as awsS3Driver, toS3StorageKey } from './drivers/aws-s3/aws-s3.
 export type { AwsS3DriverOptions, S3PutObjectOptions } from './drivers/aws-s3/aws-s3.js'
 
 // Utilities
-export { serialize, deserialize, validateKey } from './utils.js'
+export { validateKey } from './utils.js'
 ```
 
 ## Utilities
 
 ```typescript
 import { 
-  serialize, 
-  deserialize, 
   validateKey,
   toS3StorageKey
 } from '@mtng/unstorage'
-
-// Serialize/deserialize values
-const serialized = serialize({ test: 'value' })     // '{"test":"value"}'
-const deserialized = deserialize(serialized)        // { test: 'value' }
 
 // Validate keys
 validateKey('valid-key')     // OK

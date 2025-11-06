@@ -3,8 +3,6 @@ export type { MTBaseDriverOptions } from './types.js';
 
 // Export utilities
 export { 
-  serialize, 
-  deserialize, 
   validateKey 
 } from './utils.js';
 

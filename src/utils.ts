@@ -23,37 +23,7 @@ function isPureObject(value: any): boolean {
   return !proto || Object.prototype.isPrototypeOf.call(proto, Object);
 }
 
-/**
- * Converts a value to a string for storage
- * Follows unstorage stringify implementation from _utils.ts
- */
-export function serialize(value: unknown): string {
-  if (isPrimitive(value)) {
-    return String(value);
-  }
-
-  if (isPureObject(value) || Array.isArray(value)) {
-    try {
-      return JSON.stringify(value);
-    } catch {
-      throw new Error('[unstorage] Cannot stringify value!');
-    }
-  }
-
-  if (typeof (value as any).toJSON === 'function') {
-    return serialize((value as any).toJSON());
-  }
-
-  throw new Error('[unstorage] Cannot stringify value!');
-}
-
-/**
- * Attempts to deserialize a stored string value
- * Uses destr library for safe deserialization like unstorage
- */
-export function deserialize(value: string): unknown {
-  return destr(value);
-}
+// Intentionally removed legacy serialize/deserialize helpers.
 
 /**
  * Encode helper: if value looks like a plain object or array, JSON stringify, otherwise cast to string.
