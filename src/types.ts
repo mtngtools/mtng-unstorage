@@ -84,7 +84,7 @@ export type ResolvedMTBaseDriverOptions = Prettify<MTBaseDriverOptions
  * - Either provide no mapping functions, or provide both `toStorageKey` and `fromStorageKey`.
  * - Exception: if `readOnly: true`, `fromStorageKey` may be omitted when `toStorageKey` is provided.
  */
-export type MTFlexAdditionalDriverOptions = (
+export type MTFlexKeyMappingOptions = (
   | {
       // no mapping functions
       toStorageKey?: never;
@@ -103,14 +103,41 @@ export type MTFlexAdditionalDriverOptions = (
     }
 );
 
-export type MTFlexDriverOptions = MTBaseDriverOptions & MTFlexAdditionalDriverOptions;
+/**
+ * Options added to flex drivers for value mapping functions.
+ *
+ * Value mapping runs on raw storage values (strings) read/written by the driver:
+ * - `toStorageValue` transforms the serialized string before writing to storage
+ * - `fromStorageValue` transforms the raw string read from storage into a typed value
+ *
+ * Mapping rules (type-level):
+ * - Either provide no value mapping functions, or provide both.
+ * - Exception: if `readOnly: true`, `fromStorageValue` may be omitted when `toStorageValue` is provided.
+ */
+export type MTFlexValueMappingOptions = (
+  | {
+      toStorageValue?: never;
+      fromStorageValue?: never;
+    }
+  | {
+      toStorageValue: (value: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => string | Promise<string>;
+      fromStorageValue: <TOut = unknown>(value: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => TOut | Promise<TOut>;
+    }
+  | {
+      toStorageValue: (value: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => string | Promise<string>;
+      fromStorageValue?: <TOut = unknown>(value: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => TOut | Promise<TOut>;
+      readOnly: true;
+    }
+);
+
+export type MTFlexDriverOptions = MTBaseDriverOptions & MTFlexKeyMappingOptions & MTFlexValueMappingOptions;
 
 /**
  * Resolved options passed to flex mapping functions.
  * Contains canonical driver fields the mapper may need (base and storagePrefix)
  * plus any other validated fields.
  */
-export type ResolvedMTFlexDriverOptions = Prettify<ResolvedMTBaseDriverOptions & MTFlexAdditionalDriverOptions>;
+export type ResolvedMTFlexDriverOptions = Prettify<ResolvedMTBaseDriverOptions & MTFlexKeyMappingOptions & MTFlexValueMappingOptions>;
 
 export type MTBaseDriverRequestOptions = {
   /**

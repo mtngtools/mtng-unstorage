@@ -56,6 +56,27 @@ export function deserialize(value: string): unknown {
 }
 
 /**
+ * Encode helper: if value looks like a plain object or array, JSON stringify, otherwise cast to string.
+ * Kept minimal and dependency-light; mirrors serialize semantics but returns string or throws.
+ */
+export function encodeValueToJSONIfObject(value: unknown): string {
+  if (isPrimitive(value)) return String(value);
+  if (isPureObject(value) || Array.isArray(value)) return JSON.stringify(value);
+  if (typeof (value as any)?.toJSON === 'function') return encodeValueToJSONIfObject((value as any).toJSON());
+  return String(value as any);
+}
+
+/**
+ * Decode helper: if the input is a string that looks like JSON, parse using destr; otherwise return as-is.
+ */
+export function decodeJSONIfApplicable<T = unknown>(value: unknown): T | unknown {
+  if (typeof value === 'string') {
+    return destr(value) as T;
+  }
+  return value as T;
+}
+
+/**
  * Validates that a key is safe for storage
  */
 export function validateKey(key: string): void {

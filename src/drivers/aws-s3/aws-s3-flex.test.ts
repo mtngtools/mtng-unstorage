@@ -138,4 +138,61 @@ describe('aws-s3-flex flex only scenarios', () => {
     expect(await baseStorage.hasItem(reducedKey)).toBe(false)
   })
 
+  it('custom value mapping parses JSON from raw S3 into typed object and stringifies on write', async () => {
+    const bucket = 'test-bucket'
+
+    const mockClient = new MockS3Client()
+
+    const toStorageKey = (key: string) => key
+    const fromStorageKey = (key: string) => key
+
+    type User = { id: string; name: string }
+
+    // Value mappers operate on raw strings
+    const toStorageValue = (value: string) => {
+      // Ensure value is valid JSON string (pass-through here)
+      return value
+    }
+    const fromStorageValue = <T = unknown>(value: string): T => {
+      try {
+        return JSON.parse(value) as T
+      } catch {
+        return value as unknown as T
+      }
+    }
+
+    const flexStorage = createStorage({
+      driver: awsS3FlexDriver({
+        s3Client: (mockClient as any),
+        bucket,
+        s3StoragePrefix: '',
+        base: '',
+        name: 'aws-s3-flex',
+        allowClear: true,
+        toStorageKey,
+        fromStorageKey,
+        toStorageValue,
+        fromStorageValue,
+      })
+    })
+
+    await flexStorage.clear();
+    (mockClient as any).storage.clear()
+
+    const key = 'users:1'
+    const user: User = { id: '1', name: 'Ada' }
+
+    // set via storage (storage layer serializes to JSON string before driver)
+    await flexStorage.setItem(key, user)
+
+    // underlying storage should store a JSON string
+    const storedRaw = (mockClient as any).storage.get('users:1')
+    expect(typeof storedRaw).toBe('string')
+    expect(() => JSON.parse(storedRaw)).not.toThrow()
+
+    // get should return typed object using fromStorageValue
+    const got = await flexStorage.getItem(key) as User
+    expect(got).toEqual(user)
+  })
+
 });

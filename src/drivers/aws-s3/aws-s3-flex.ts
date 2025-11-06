@@ -33,6 +33,14 @@ export default defineDriver((options: AwsS3FlexDriverOptions) => {
   
   const toStorageKey = options.toStorageKey ?? mapUnstorageKeyToS3Key;
   const fromStorageKey = options.fromStorageKey ?? mapS3ObjectKeyToUnstorageKey;
+  // Value mapping operates on raw storage strings; defaults are pass-through
+  const toStorageValue = options.toStorageValue;
+  const fromStorageValue = options.fromStorageValue;
+
+  // Runtime validation for value mapping: if toStorageValue provided, require fromStorageValue unless readOnly
+  if (toStorageValue && !fromStorageValue && !readOnly) {
+    throw new Error('toStorageValue provided without fromStorageValue; provide both or set readOnly: true');
+  }
   const mapToS3Key = toStorageKey;
   const mapFromS3Key = fromStorageKey;
 
@@ -56,6 +64,10 @@ export default defineDriver((options: AwsS3FlexDriverOptions) => {
         });
         if (!body) return null;
         const content = await streamToString(body);
+        // If a fromStorageValue mapper is provided, transform raw string to typed value
+        if (fromStorageValue) {
+          return await fromStorageValue(content, resolvedDriverOptions as any, opts);
+        }
         return content;
       } catch (error: any) {
         return null;
@@ -64,10 +76,11 @@ export default defineDriver((options: AwsS3FlexDriverOptions) => {
 
   async function setItem(key: string, value: string, opts?: MTBaseDriverRequestOptions & { s3Options?: S3PutObjectOptions }): Promise<void> {
       checkReadOnly(readOnly, 'setItem');
+      const body = toStorageValue ? await toStorageValue(value, resolvedDriverOptions as any, opts) : value;
       await putS3Object(client, {
         Bucket,
         Key: mapToS3Key(key, resolvedDriverOptions, opts),
-        Body: value,
+        Body: body,
         ...opts?.s3Options,
       } as PutObjectCommandInput);
   }
