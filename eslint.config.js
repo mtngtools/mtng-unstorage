@@ -17,7 +17,7 @@ export default [
     rules: {
       'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       'prefer-const': 'error',
-      'semi': ['error', 'always'],
+      'semi': ['warn', 'always'],
       'quotes': ['error', 'single'],
       'no-console': 'warn',
       'no-debugger': 'error',
