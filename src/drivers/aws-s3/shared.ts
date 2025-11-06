@@ -1,6 +1,7 @@
-import { validateKey } from '../../utils.js';
-import { S3Client } from '@aws-sdk/client-s3';
-import type { AwsS3DriverOptions, ValidatedAWSS3DriverOptions } from './types.js';
+import { validateKey, validateBaseDriverOptions, validateAWSRegionAndCredentials, filterKeyByDepthByOptions } from '../../utils.js';
+import { GetObjectCommandInput, PutObjectCommandInput, DeleteObjectCommandInput, S3Client } from '@aws-sdk/client-s3';
+import type { AwsS3DriverOptions, ResolvedAWSS3DriverOptions } from './types.js';
+import type { MTBaseDriverRequestOptions, ResolvedMTFlexDriverOptions } from '../../types.js';
 
 /*
  * NOTE: The old backward-compatible aliases (normalizeKey, joinKey, toStorageKey)
@@ -37,40 +38,117 @@ export function joinS3Key(base: string | undefined, key: string): string {
 }
 
 /**
- * Converts a storage key to an S3 object key using the provided options
+ * Build the S3 search prefix for ListObjectsV2 by combining storagePrefix, base,
+ * and an optional unstorage basePrefix (":" separated) converted to S3 path format.
  */
-export function toS3StorageKey(key: string, options: { base?: string, s3StoragePrefix?: string }): string {
-  validateKey(key);
-  const fullKey = joinS3Key(options.base, key);
-  return joinS3Key(options.s3StoragePrefix, fullKey);
+export function buildS3SearchPrefix (
+  resolvedDriverOptions: { fullBasePrefix: string },
+  basePrefix?: string
+): string {
+  let searchPrefix = resolvedDriverOptions.fullBasePrefix || '';
+    if (basePrefix && basePrefix.trim()) {
+      const s3BasePrefix = basePrefix.replace(/:/g, '/');
+      searchPrefix = joinS3Key(searchPrefix, s3BasePrefix);
+    } else if (searchPrefix) {
+      // Ensure trailing slash when searching by just the prefix root
+      if (!searchPrefix.endsWith('/')) searchPrefix += '/';
+    }
+  return searchPrefix;
 }
 
 /**
- * Validate required S3 options (client and bucket) and throw helpful errors.
- * This helper is shared by both the basic and flex S3 drivers.
+ * Converts an unstorage key to an S3 object key using the provided options
+ * (S3-driver specific)
  */
-export type S3DriverOptionsMinimal = {
-  s3Client?: any;
-  bucket?: string | undefined;
-  region?: string | undefined;
-  accessKeyId?: string | undefined;
-  secretAccessKey?: string | undefined;
-  sessionToken?: string | undefined;
-};
+export function mapUnstorageKeyToS3Key(
+  key: string, 
+  resolvededDriverOpts: { fullBasePrefix: string }, 
+  _requestOpts?: MTBaseDriverRequestOptions
+): string {
+  validateKey(key.replace(/:/g, '/'));
+  return joinS3Key(resolvededDriverOpts.fullBasePrefix, key);
+}
+
+/**
+ * @deprecated Use mapUnstorageKeyToS3Key instead. This alias will be removed in a future major release.
+ */
+export const toS3StorageKey = mapUnstorageKeyToS3Key;
+
+/**
+ * Variant of mapUnstorageKeyToS3Key that ensures the final segment is stored with a `.json` extension.
+ * Delegates base mapping to mapUnstorageKeyToS3Key and then appends the extension to the resulting string.
+ *
+ * Examples:
+ *   makeS3KeyWithJSONExt('user:123', { fullBasePrefix: 'prefix/base' }) -> 'prefix/base/user:123.json'
+ *   makeS3KeyWithJSONExt('folder:config', { fullBasePrefix: '' }) -> 'folder:config.json'
+ */
+export const toS3KeyWithJSONExt = (
+  key: string,
+  resolvedDriverOpts: { fullBasePrefix: string },
+  _requestOpts?: MTBaseDriverRequestOptions
+): string => `${mapUnstorageKeyToS3Key(key, resolvedDriverOpts, _requestOpts)}.json`;
+
+/**
+ * Map an S3 object key to an unstorage key.
+ * - Uses a custom fromStorageKey present on resolvedDriverOptions when provided
+ * - Falls back to the default fromS3StorageKey otherwise
+ * Returns undefined when no valid mapping is produced.
+ */
+export function mapS3ObjectKeyToUnstorageKey(
+  key: string, // s3 object key
+  resolvedDriverOptions: ResolvedMTFlexDriverOptions,
+  _requestOpts?: MTBaseDriverRequestOptions,
+): string {
+  if (!key) return '';
+  let retKey = key;
+  
+  // Remove driver base if present
+  const { fullBasePrefix } = resolvedDriverOptions;
+  if (fullBasePrefix && retKey.startsWith(fullBasePrefix)) {
+    retKey = retKey.slice(fullBasePrefix.length);
+    if (retKey.startsWith('/')) retKey = retKey.slice(1);
+  }
+
+  // Convert to unstorage key format (/ -> :)
+  retKey = retKey.replace(/\//g, ':');
+
+  return retKey;
+}
+
+/**
+ * Variant of mapS3ObjectKeyToUnstorageKey that strips a trailing `.json` extension
+ * from the final segment if present, after performing base-prefix removal and `/` -> `:` conversion.
+ *
+ * Examples:
+ *  keyFromS3ObjectWithJSONExt('prefix/base/user:123.json', { fullBasePrefix: 'prefix/base' }) -> 'user:123'
+ *  keyFromS3ObjectWithJSONExt('folder:config.json', { fullBasePrefix: '' }) -> 'folder:config'
+ *  keyFromS3ObjectWithJSONExt('folder:config', { fullBasePrefix: '' }) -> 'folder:config'
+ */
+export const fromS3KeyWithJSONExt = (
+  s3Key: string,
+  resolvedDriverOptions: { fullBasePrefix: string },
+  _requestOpts?: MTBaseDriverRequestOptions,
+): string => {
+  const base = mapS3ObjectKeyToUnstorageKey(
+    s3Key,
+    resolvedDriverOptions as unknown as ResolvedMTFlexDriverOptions,
+    _requestOpts,
+  );
+  return base.endsWith('.json') ? base.slice(0, -5) : base;
+}
 
 /**
  * Validate required S3 options (client and bucket) and throw helpful errors.
  * Accepts a single options object to allow evolving the signature in future.
  */
 export function validateS3Options(
-  opts: (AwsS3DriverOptions & {
-    s3StoragePrefix: string;
-    base: string;
-    name: string;
-    readOnly: boolean;
-    allowClear: boolean;
-  })
-): ValidatedAWSS3DriverOptions {
+  opts: (AwsS3DriverOptions)
+): ResolvedAWSS3DriverOptions {
+
+  const resolvedBase = validateBaseDriverOptions({ ...opts, storagePrefix: opts.storagePrefix ?? opts.s3StoragePrefix ?? '' });
+  const resolvedAWSRegionandCredentials = validateAWSRegionAndCredentials(opts);
+  const fullBasePrefix = joinS3Key(resolvedBase.storagePrefix, resolvedBase.base);
+
   if (!opts || !opts.bucket) {
     throw new Error('S3 bucket name is required');
   }
@@ -81,26 +159,19 @@ export function validateS3Options(
     }
   }
 
-  // Return normalized/validated options with required fields present
   return {
     ...(opts.s3Client ? { s3Client: opts.s3Client } : {}),
     bucket: opts.bucket,
-    s3StoragePrefix: opts.s3StoragePrefix,
-    base: opts.base,
-    name: opts.name,
-    readOnly: opts.readOnly,
-    allowClear: opts.allowClear,
-    ...(opts.region ? { region: opts.region } : {}),
-    ...(opts.accessKeyId ? { accessKeyId: opts.accessKeyId } : {}),
-    ...(opts.secretAccessKey ? { secretAccessKey: opts.secretAccessKey } : {}),
-    ...(opts.sessionToken ? { sessionToken: opts.sessionToken } : {}),
-  } as ValidatedAWSS3DriverOptions;
+    ...resolvedBase,
+    fullBasePrefix,
+    ...resolvedAWSRegionandCredentials,
+  } as ResolvedAWSS3DriverOptions;
 }
 
 /**
  * Create or return an S3Client from validated options.
  */
-export function createS3Client(opts: ValidatedAWSS3DriverOptions): S3Client {
+export function createS3Client(opts: ResolvedAWSS3DriverOptions): S3Client {
   if (opts.s3Client) return opts.s3Client as S3Client;
   return new S3Client({
     ...(opts.region ? { region: opts.region } : {}),
@@ -112,4 +183,99 @@ export function createS3Client(opts: ValidatedAWSS3DriverOptions): S3Client {
       }
     } : {})
   });
+}
+
+/**
+ * Fetch an object's Body from S3 using GetObjectCommand.
+ * Returns the Body stream/string if present, otherwise null.
+ */
+export async function getS3Body(
+  client: S3Client,
+  params: GetObjectCommandInput
+): Promise<any | null> {
+  const { GetObjectCommand } = await import('@aws-sdk/client-s3');
+  // console.debug(`Getting S3 object   -- KEY: ${params.Key}    -- Bucket: ${params.Bucket}`);
+
+  const response = await client.send(new GetObjectCommand(params));
+  return response.Body ?? null;
+}
+
+/**
+ * Put an object to S3 using PutObjectCommand.
+ */
+export async function putS3Object(
+  client: S3Client,
+  params: PutObjectCommandInput
+): Promise<void> {
+  const { PutObjectCommand } = await import('@aws-sdk/client-s3');
+  // console.debug(`Putting S3 object   -- KEY: ${params.Key}    -- Bucket: ${params.Bucket}`);
+  await client.send(new PutObjectCommand(params));
+}
+
+/**
+ * Delete an object from S3 using DeleteObjectCommand.
+*/
+export async function deleteS3Object(
+  client: S3Client,
+  params: DeleteObjectCommandInput
+): Promise<void> {
+  // console.debug(`Deleting S3 object   -- KEY: ${params.Key}    -- Bucket: ${params.Bucket}`);
+  const { DeleteObjectCommand } = await import('@aws-sdk/client-s3');
+  await client.send(new DeleteObjectCommand(params));
+}
+
+/**
+ * List S3 objects under a prefix and map each object's Key using the provided mapper.
+ * Returns an array of mapped keys, skipping any that map to undefined.
+ */
+export async function listS3KeysMapped(
+  client: S3Client,
+  resolvedDriverOptions: ResolvedAWSS3DriverOptions,
+  mapKey: (key: string, resolvedDriverOptions: ResolvedAWSS3DriverOptions, requestOpts?: MTBaseDriverRequestOptions) => string | undefined,
+  basePrefix: string,
+  opts?: MTBaseDriverRequestOptions
+): Promise<string[]> {
+  const { ListObjectsV2Command } = await import('@aws-sdk/client-s3');
+  const keys: string[] = [];
+  let continuationToken: string | undefined;
+  // console.debug(`Listing S3 objects -- maxDepth ${opts?.maxDepth ?? resolvedDriverOptions.maxDepth ?? undefined}  -- basePrefix: ${basePrefix} -- fullBasePrefix: ${resolvedDriverOptions.fullBasePrefix} -- Bucket: ${resolvedDriverOptions.bucket}`);
+
+  do {
+    const response = await client.send(new ListObjectsV2Command({      
+      Bucket: resolvedDriverOptions.bucket,
+      Prefix: buildS3SearchPrefix({ fullBasePrefix: resolvedDriverOptions.fullBasePrefix },basePrefix),
+      MaxKeys: 1000,
+      ContinuationToken: continuationToken
+    }));
+    if (response.Contents) {
+      for (const object of response.Contents) {
+        if (!object.Key) continue;
+        
+        const mapped = mapKey(object.Key, resolvedDriverOptions, opts);
+  // console.debug(`Mapped S3 object  -- MAPPED: ${mapped} -- KEY: ${object.Key}`);
+        if (mapped) {
+          // This can be optimized later
+          // console.debug(`In filter depth: ${filterKeyByDepthByOptions(mapped, resolvedDriverOptions, opts)} -- MAPPED: ${mapped}  `);
+          if (filterKeyByDepthByOptions(mapped, resolvedDriverOptions, opts)) {
+            keys.push(mapped);
+          }
+        }
+  // console.debug(`Keys from Listing S3 objects  -- KEYS: ${keys} `);
+
+      
+      }
+    }
+    continuationToken = response.NextContinuationToken;
+  } while (continuationToken);
+
+  return keys;
+}
+
+/**
+ * Send a HeadObjectCommand to S3 to check for object existence.
+*/
+export async function getS3Head(client:S3Client, params: { Bucket: string; Key: string; }, ) {
+  const command = new (await import('@aws-sdk/client-s3')).HeadObjectCommand(params);
+
+  await client.send(command);
 }

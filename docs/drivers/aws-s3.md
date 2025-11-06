@@ -4,7 +4,7 @@ An AWS S3 storage driver for unstorage using the official AWS SDK for JavaScript
 
 ## Features
 
-- ✅ **Full AWS SDK Integration**: Uses official AWS SDK v3 for maximum compatibility
+- ✅ **AWS SDK Integration**: Uses official AWS SDK v3 for maximum compatibility
 - ✅ **Support for native credentials**: Does not require AWS credentials to instantiate if S3Client finds them in runtime enviroment
 - ✅ **MaxDepth Support**: Native support for filtering keys by depth
 - ✅ **Read-Only Mode**: Configurable read-only mode to prevent write operations
@@ -70,7 +70,9 @@ interface AwsS3DriverOptions extends MTBaseDriverOptions {
 
   // Optional S3-specific
   s3Client?: S3Client           // Provide to reuse/customize a shared client
-  s3StoragePrefix?: string      // Global S3 storage prefix for all keys
+  storagePrefix?: string        // Global S3 storage prefix for all keys (preferred)
+  // NOTE: `s3StoragePrefix` is still accepted for backwards compatibility but is
+  // canonicalized to `storagePrefix` by the driver validator.
 
   // Optional inline AWS config (used only when s3Client is not provided)
   region?: string
@@ -88,9 +90,13 @@ interface AwsS3DriverOptions extends MTBaseDriverOptions {
 
 Note: If any inline credential is provided, both accessKeyId and secretAccessKey are required. If omitted, the AWS SDK default credential provider chain is used.
 
-### Understanding `base` vs `s3StoragePrefix`
+If you provide a pre-constructed `s3Client`, inline region/credentials are ignored — the driver will use the supplied client. When `s3Client` is not supplied, the driver will construct a client for you using inline region/credentials (if present) or the AWS SDK default credential/region resolution.
 
-These two options serve different purposes and should be chosen based on your use case:
+The driver validator computes a resolved/validated options object that the driver uses internally. This validated shape includes a computed `fullBasePrefix` (the joined form of `storagePrefix` and `base`) — use this when writing custom mapping functions so key construction stays consistent.
+
+### Understanding `base` vs `storagePrefix` (previously `s3StoragePrefix`)
+
+These two options serve different purposes and should be chosen based on your use case. The driver still accepts the legacy `s3StoragePrefix` option, but it is canonicalized to `storagePrefix` by the validator — prefer `storagePrefix` going forward.
 
 **Use `base`** when:
 - You're categorizing the type of data being stored (e.g., `users`, `cache`, `sessions`)
@@ -98,12 +104,12 @@ These two options serve different purposes and should be chosen based on your us
 - You want driver-agnostic organization of your data
 - Example: `base: 'users'` could work with any unstorage driver
 
-**Use `s3StoragePrefix`** when:
+**Use `storagePrefix`** when:
 - You need S3-specific bucket organization or namespacing
 - You're working with existing S3 files that have a specific prefix structure
 - You want to isolate your application's data within a shared S3 bucket
 - The prefix is tied to S3 infrastructure and wouldn't make sense with other drivers
-- Example: `s3StoragePrefix: 'app-prod/data'` for production environment isolation
+- Example: `storagePrefix: 'app-prod/data'` for production environment isolation
 
 ```typescript
 // Good: Using base for data categorization (driver-agnostic)
@@ -111,12 +117,12 @@ const userStorage = createStorage({
   driver: awsS3Driver({ s3Client, bucket: 'my-bucket', base: 'users' })
 })
 
-// Good: Using s3StoragePrefix for S3-specific organization
+// Good: Using storagePrefix for S3-specific organization
 const prodStorage = createStorage({
   driver: awsS3Driver({ 
     s3Client, 
     bucket: 'shared-bucket', 
-    s3StoragePrefix: 'app-prod/v2' 
+    storagePrefix: 'app-prod/v2' 
   })
 })
 
@@ -125,8 +131,8 @@ const userCacheStorage = createStorage({
   driver: awsS3Driver({ 
     s3Client, 
     bucket: 'shared-bucket',
-    s3StoragePrefix: 'app-prod',  // Environment/app isolation
-    base: 'cache'                 // Data type categorization
+    storagePrefix: 'app-prod',  // Environment/app isolation
+    base: 'cache'               // Data type categorization
   })
 })
 ```
@@ -273,13 +279,30 @@ You can use any parameter from AWS S3's `PutObjectCommand` except `Bucket`, `Key
 
 ## Key Structure
 
-Keys are structured as: `[s3StoragePrefix]/[base]/[key]`
+Internally the driver resolves and exposes a `fullBasePrefix` which is the joined form of `storagePrefix` and `base`. Final S3 object keys are constructed as: `[fullBasePrefix]/[key]`.
 
-Example:
-- `s3StoragePrefix`: `'myapp/'`
+Example (using `storagePrefix`):
+- `storagePrefix`: `'myapp/'`
 - `base`: `'users/'` 
 - `key`: `'123'`
 - Final S3 key: `'myapp/users/123'`
+
+If the legacy `s3StoragePrefix` option is provided it will be treated the same as `storagePrefix` during validation.
+
+### Mapping API
+
+The driver accepts optional mapping functions (`toStorageKey` / `fromStorageKey`) that let you control how storage keys map to S3 object keys. Important changes to the mapping API:
+
+- Mapping functions are called with two arguments: `(keyOrS3Key, validatedOptions)`. The second parameter is the resolved/validated driver options object (the same shape the driver uses internally). This gives your mappers access to `fullBasePrefix`, canonical `storagePrefix`, `base`, and other resolved fields.
+- Example signature:
+
+```ts
+function toStorageKey(key: string, opts: ValidatedAWSS3DriverOptions): string {
+  // opts.fullBasePrefix is available here
+}
+```
+
+Default mapping functions provided by the driver already use `fullBasePrefix`, so you only need to supply custom mappers if you want alternative key layouts.
 
 ## Error Handling
 

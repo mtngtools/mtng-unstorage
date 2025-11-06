@@ -1,12 +1,10 @@
-import type { MTBaseDriverOptions, AwsRegionAndCredentials } from '../../types';
+import type { MTBaseDriverOptions, AwsRegionAndCredentials, MTFlexDriverOptions, ResolvedMTBaseDriverOptions, Prettify } from '../../types';
 import type { S3Client, PutObjectCommandInput } from '@aws-sdk/client-s3';
 
 /**
  * Generic flex driver options alias that currently equals MTBaseDriverOptions.
  * This is the extension point for non-breaking flex-specific options later.
  */
-export type MTFlexDriverOptions = MTBaseDriverOptions;
-
 /**
  * Shared S3-specific options used by both the basic and flex drivers.
  */
@@ -32,8 +30,12 @@ type SharedAwsS3DriverOptionsBase = {
 
   /**
    * Optional S3 storage prefix for all keys in the bucket
-   */
+  * @deprecated Use `storagePrefix` instead. `s3StoragePrefix` is kept only for
+  * backwards compatibility; prefer `storagePrefix` for new callers.
+  */
   s3StoragePrefix?: string;
+
+  // `storagePrefix` is declared on `MTBaseDriverOptions`; prefer that.
 };
 
 export type SharedAwsS3DriverOptions = SharedAwsS3DriverOptionsBase & AwsRegionAndCredentials;
@@ -65,18 +67,16 @@ export const AWS_S3_FLEX_DRIVER_NAME = 'aws-s3-flex' as const;
 /**
  * Validated S3 driver options returned by validateS3Options.
  * Assumes drivers set defaults before validation, so formerly-optional
- * fields (base, name, readOnly, allowClear, s3StoragePrefix) are present.
+ * fields (base, name, readOnly, allowClear, storagePrefix) are present.
  */
-export type ValidatedAWSS3DriverOptions = {
-  s3Client?: S3Client;
-  bucket: string;
-  s3StoragePrefix: string;
-  base: string;
-  name: string;
-  readOnly: boolean;
-  allowClear: boolean;
-  region?: string;
-  accessKeyId?: string;
-  secretAccessKey?: string;
-  sessionToken?: string;
-};
+export type ResolvedAWSS3DriverOptions = Prettify<
+  ResolvedMTBaseDriverOptions
+  & SharedAwsS3DriverOptionsBase
+  & Required<Pick<SharedAwsS3DriverOptionsBase, 's3Client'>>
+  & AwsRegionAndCredentials
+  > 
+
+/**
+ * @deprecated Use ResolvedAWSS3DriverOptions instead. Will be removed in a future major release.
+ */
+export type ValidatedAWSS3DriverOptions = ResolvedAWSS3DriverOptions;
