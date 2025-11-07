@@ -75,6 +75,7 @@ export default defineDriver((options: AwsS3FlexDriverOptions) => {
     }
 
   async function setItem(key: string, value: string, opts?: MTBaseDriverRequestOptions & { s3Options?: S3PutObjectOptions }): Promise<void> {
+      // console.debug(`aws-s3-flex storage setItem -- KEY: ${key}  -- Bucket: ${Bucket}`);
       checkReadOnly(readOnly, 'setItem');
       const body = toStorageValue ? await toStorageValue(value, resolvedDriverOptions as any, opts) : value;
       await putS3Object(client, {
@@ -94,6 +95,7 @@ export default defineDriver((options: AwsS3FlexDriverOptions) => {
   }
 
   async function getKeys(basePrefix: string, opts: MTBaseDriverRequestOptions): Promise<string[]> {
+      // console.debug(`aws-s3-flex storage getKeys -- basePrefix: ${basePrefix}  -- Bucket: ${Bucket}`);
       return await listS3KeysMapped(
         client,
         resolvedDriverOptions,

@@ -33,8 +33,8 @@ d('[e2e] AWS S3 FLEX Driver JSON mapping', () => {
         storagePrefix,
         base,
         allowClear: true,
-        toStorageKey: (key, resolved, req) => toS3KeyWithJSONExt(key, { fullBasePrefix: resolved.fullBasePrefix }, req),
-        fromStorageKey: (key, resolved, req) => fromS3KeyWithJSONExt(key, { fullBasePrefix: resolved.fullBasePrefix }, req),
+        toStorageKey: toS3KeyWithJSONExt,
+        fromStorageKey: fromS3KeyWithJSONExt,
       })
     });
 
