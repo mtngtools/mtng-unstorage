@@ -1,45 +1,23 @@
 /**
  * Utility functions for storage drivers
- * Following unstorage repository standards
  */
 
 import { destr } from 'destr';
 import type { AwsRegionAndCredentials, MTBaseDriverOptions, MTBaseDriverRequestOptions, ResolvedMTBaseDriverOptions, ResolvedMTFlexDriverOptions } from './types';
 
-/**
- * Helper to check if value is primitive
- */
-function isPrimitive(value: any): boolean {
-  const type = typeof value;
-  return value === null || (type !== 'object' && type !== 'function');
-}
 
 /**
- * Helper to check if value is pure object
+ * Serialize helper: canonicalize any value to a JSON string using JSON.stringify.
+ * Drivers will write values using this canonical serializer.
  */
-function isPureObject(value: any): boolean {
-  if (!value || typeof value !== 'object') return false;
-  const proto = Object.getPrototypeOf(value);
-  return !proto || Object.prototype.isPrototypeOf.call(proto, Object);
-}
-
-// Intentionally removed legacy serialize/deserialize helpers.
-
-/**
- * Encode helper: if value looks like a plain object or array, JSON stringify, otherwise cast to string.
- * Kept minimal and dependency-light; mirrors serialize semantics but returns string or throws.
- */
-export function encodeValueToJSONIfObject(value: unknown): string {
-  if (isPrimitive(value)) return String(value);
-  if (typeof (value as any)?.toJSON === 'function') return encodeValueToJSONIfObject((value as any).toJSON());
-  if (isPureObject(value) || Array.isArray(value)) return JSON.stringify(value);
-  return String(value as any);
+export function serialize(value: unknown): string {
+  return JSON.stringify(value);
 }
 
 /**
  * Decode helper: if the input is a string that looks like JSON, parse using destr; otherwise return as-is.
  */
-export function decodeJSONIfApplicable<T = unknown>(value: unknown): T | unknown {
+export function deserialize<T = unknown>(value: unknown): T | unknown {
   if (typeof value === 'string') {
     return destr(value) as T;
   }

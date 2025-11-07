@@ -12,25 +12,18 @@ import { MTBaseDriverRequestOptions } from '../../types.js';
  * - Uses general helpers from `../../utils.ts` where applicable
  */
 export default defineDriver((options: AwsS3DriverOptions) => {
-
   const resolvedDriverOptions = validateS3Options({
     ...options,
     name: options.name ?? AWS_S3_DRIVER_NAME,
     storagePrefix: options.storagePrefix ?? options.s3StoragePrefix ?? '',
   });
 
-  const {
-    bucket: Bucket,
-    name,
-    readOnly = false,
-  } = resolvedDriverOptions;
-
+  const { bucket: Bucket, name, readOnly = false } = resolvedDriverOptions;
 
   // Build client if not provided using shared helper
   const client = createS3Client(resolvedDriverOptions);
 
   // Using shared helpers from driver-local `./shared.ts` and general `utils.ts`
-
 
   async function hasItem(key: string, opts: MTBaseDriverRequestOptions): Promise<boolean> {
     // console.debug(`aws-s3 storage hasItem -- KEY: ${key}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
@@ -38,10 +31,10 @@ export default defineDriver((options: AwsS3DriverOptions) => {
       await getS3Head(client, {
         Bucket,
         Key: mapUnstorageKeyToS3Key(key, resolvedDriverOptions, opts),
-        });
+      });
       return true;
     } catch (error: any) {
-        return false;
+      return false;
     }
   }
 
@@ -53,30 +46,37 @@ export default defineDriver((options: AwsS3DriverOptions) => {
         Key: mapUnstorageKeyToS3Key(key, resolvedDriverOptions),
       });
       if (!body) return null;
-      
+
       const content = await streamToString(body);
       // Return the raw string - the Storage layer will handle deserialization
       return content;
     } catch (error: any) {
-        return null;
+      return null;
     }
   }
 
-  async function setItem(key: string, value: string, opts?: { s3Options?: S3PutObjectOptions }): Promise<void> {
+  async function setItem(
+    key: string,
+    value: string,
+    opts?: { s3Options?: S3PutObjectOptions },
+  ): Promise<void> {
     // console.debug(`aws-s3 storage setItem -- KEY: ${key}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
     checkReadOnly(readOnly, 'setItem');
-    await putS3Object(client, {
-      Bucket,
-      Key: mapUnstorageKeyToS3Key(key, resolvedDriverOptions),
-      Body: value,  // Value is already serialized by the Storage layer
-      ...opts?.s3Options // Spread any additional S3 options
-    } as PutObjectCommandInput);
+    await putS3Object(
+      client,
+      {
+        Bucket,
+        Key: mapUnstorageKeyToS3Key(key, resolvedDriverOptions),
+        Body: value,
+        ...opts?.s3Options, // Spread any additional S3 options
+      } as PutObjectCommandInput,
+    );
   }
-  
+
   async function removeItem(key: string, _opts: any): Promise<void> {
     // console.debug(`aws-s3 storage removeItem -- KEY: ${key}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
     checkReadOnly(readOnly, 'removeItem');
-    
+
     await deleteS3Object(client, {
       Bucket,
       Key: mapUnstorageKeyToS3Key(key, resolvedDriverOptions),
@@ -93,7 +93,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
       opts,
     );
   }
-  
+
   async function clear(base: string, opts: any): Promise<void> {
     // console.debug(`aws-s3 storage clear -- base: ${base}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
     await clearByListingAndBatching({
@@ -116,6 +116,6 @@ export default defineDriver((options: AwsS3DriverOptions) => {
     setItem,
     removeItem,
     getKeys,
-    clear
+    clear,
   };
 });
