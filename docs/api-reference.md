@@ -6,9 +6,12 @@
 // Common types
 export type { MTBaseDriverOptions } from './types.js'
 
-// AWS S3 Driver
-export { default as awsS3Driver, toS3StorageKey } from './drivers/aws-s3/aws-s3.js'
+// AWS S3 Drivers
+// Root export exposes the base S3 driver
+export { default as awsS3Driver } from './drivers/aws-s3/aws-s3.js'
 export type { AwsS3DriverOptions, S3PutObjectOptions } from './drivers/aws-s3/aws-s3.js'
+// Subpath export exposes the flex S3 driver with custom mapping hooks
+// import awsS3FlexDriver from '@mtngtools/unstorage/aws-s3-flex'
 
 // Utilities
 export { validateKey } from './utils.js'
@@ -19,18 +22,17 @@ export { validateKey } from './utils.js'
 ```typescript
 import { 
   validateKey,
-  toS3StorageKey
 } from '@mtng/unstorage'
+import awsS3FlexDriver from '@mtngtools/unstorage/aws-s3-flex'
 
 // Validate keys
 validateKey('valid-key')     // OK
 validateKey('../invalid')    // Throws error
 
-// Get S3 storage key (useful for debugging or custom operations)
-const s3Key = toS3StorageKey('user/data', { 
-  base: 'app', 
-  s3StoragePrefix: 'prod' 
-}) // 'prod/app/user/data'
+// Flex driver (custom mapping)
+const flex = createStorage({
+  driver: awsS3FlexDriver({ bucket: 'b', toStorageKey: (k, opts) => `${opts.fullBasePrefix}/${k}.json`, fromStorageKey: (s, opts) => s })
+})
 ```
 
 ## awsS3Driver(options)

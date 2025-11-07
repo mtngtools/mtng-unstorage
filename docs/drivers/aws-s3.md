@@ -12,6 +12,8 @@ An AWS S3 storage driver for unstorage using the official AWS SDK for JavaScript
 - ✅ **Custom S3 Options**: Support for custom S3 PutObject parameters (encryption, metadata, etc.)
 - ✅ **TypeScript Support**: Full TypeScript support with detailed type definitions
 
+> Flex variant: In addition to the base driver, a flex variant adds custom key and value mapping hooks. See [Flex driver: custom mapping](#flex-driver-custom-mapping).
+
 ## Installation
 
 ```bash
@@ -289,7 +291,7 @@ Example (using `storagePrefix`):
 
 If the legacy `s3StoragePrefix` option is provided it will be treated the same as `storagePrefix` during validation.
 
-### Mapping API
+### Mapping API (base driver)
 
 The driver accepts optional mapping functions (`toStorageKey` / `fromStorageKey`) that let you control how storage keys map to S3 object keys. Important changes to the mapping API:
 
@@ -303,6 +305,64 @@ function toStorageKey(key: string, opts: ValidatedAWSS3DriverOptions): string {
 ```
 
 Default mapping functions provided by the driver already use `fullBasePrefix`, so you only need to supply custom mappers if you want alternative key layouts.
+
+## Flex driver: custom mapping
+
+Import the flex driver from the package subpath:
+
+```ts
+import awsS3FlexDriver from '@mtngtools/unstorage/aws-s3-flex'
+```
+
+The flex driver extends the base S3 driver with optional key and value mapping hooks.
+
+### Key mapping
+
+Add `toStorageKey` and `fromStorageKey` to translate between unstorage keys (':' separated) and S3 object keys:
+
+```ts
+const storage = createStorage({
+  driver: awsS3FlexDriver({
+    bucket: 'my-bucket',
+    toStorageKey(key, opts) {
+      // Example: store with .json suffix under the resolved base prefix
+      return `${opts.fullBasePrefix ? opts.fullBasePrefix + '/' : ''}${key}.json`
+    },
+    fromStorageKey(s3Key, opts) {
+      let ret = s3Key
+      if (opts.fullBasePrefix && ret.startsWith(opts.fullBasePrefix)) {
+        ret = ret.slice(opts.fullBasePrefix.length)
+        if (ret.startsWith('/')) ret = ret.slice(1)
+      }
+      return ret.endsWith('.json') ? ret.slice(0, -5) : ret
+    }
+  })
+})
+```
+
+Type rule: provide both or neither. Exception: if `readOnly: true`, `fromStorageKey` may be omitted.
+
+### Value mapping
+
+Add `toStorageValue` and `fromStorageValue` to transform raw strings written to S3 and read back:
+
+```ts
+const storage = createStorage({
+  driver: awsS3FlexDriver({
+    bucket: 'my-bucket',
+    toStorageValue(value) {
+      // value is a string produced by the storage layer; transform as needed
+      return value
+    },
+    fromStorageValue(value) {
+      // convert raw string from S3 into your desired type
+      return JSON.parse(value)
+    }
+  })
+})
+```
+
+Type rule: provide both or neither. Exception: if `readOnly: true`, `fromStorageValue` may be omitted.
 
 ## Error Handling
 

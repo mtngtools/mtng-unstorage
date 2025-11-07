@@ -7,6 +7,7 @@ This package provides multiple storage drivers for [unstorage](https://github.co
 | Driver | Status | Description | Key Features |
 |--------|--------|-------------|--------------|
 | [**AWS S3**](./aws-s3.md) | ✅ **Stable** | AWS S3 driver using AWS SDK v3 | maxDepth, readOnly, allowClear, custom S3 options |
+| [**AWS S3 (Flex)**](./aws-s3.md#flex-driver-custom-mapping) | ✅ **Stable** | Flexible S3 driver with custom key/value mapping | custom key mapping, custom value mapping, maxDepth |
 
 ## Common Interface
 
