@@ -340,7 +340,9 @@ const storage = createStorage({
 })
 ```
 
-Type rule: provide both or neither. Exception: if `readOnly: true`, `fromStorageKey` may be omitted.
+Type rules:
+- Mapping hooks are optional; both can be omitted.
+- If `fromStorageKey` is provided, either also provide `toStorageKey` or set `readOnly: true`.
 
 ### Value mapping
 
@@ -362,7 +364,9 @@ const storage = createStorage({
 })
 ```
 
-Type rule: provide both or neither. Exception: if `readOnly: true`, `fromStorageValue` may be omitted.
+Type rules:
+- Mapping hooks are optional; both can be omitted.
+- If `fromStorageValue` is provided, either also provide `toStorageValue` or set `readOnly: true`.
 
 ## Error Handling
 

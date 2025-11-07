@@ -81,8 +81,9 @@ export type ResolvedMTBaseDriverOptions = Prettify<MTBaseDriverOptions
  * Options added to flex drivers that may provide custom key mapping functions.
  *
  * Mapping rules (type-level):
- * - Either provide no mapping functions, or provide both `toStorageKey` and `fromStorageKey`.
- * - Exception: if `readOnly: true`, `fromStorageKey` may be omitted when `toStorageKey` is provided.
+ * - Mapping functions are optional; both can be omitted.
+ * - If `fromStorageKey` is provided, then either `toStorageKey` must also be provided,
+ *   or the driver must be configured as `readOnly: true`.
  */
 export type MTFlexKeyMappingOptions = (
   | {
@@ -96,9 +97,9 @@ export type MTFlexKeyMappingOptions = (
       fromStorageKey: (key: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => string;
     }
   | {
-      // readOnly mode: toStorageKey provided but fromStorageKey optional
-      toStorageKey: (key: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => string;
-      fromStorageKey?: (key: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => string;
+      // readOnly mode: fromStorageKey required; toStorageKey optional
+      fromStorageKey: (key: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => string;
+      toStorageKey?: (key: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => string;
       readOnly: true;
     }
 );
@@ -111,8 +112,9 @@ export type MTFlexKeyMappingOptions = (
  * - `fromStorageValue` transforms the raw string read from storage into a typed value
  *
  * Mapping rules (type-level):
- * - Either provide no value mapping functions, or provide both.
- * - Exception: if `readOnly: true`, `fromStorageValue` may be omitted when `toStorageValue` is provided.
+ * - Mapping functions are optional; both can be omitted.
+ * - If `fromStorageValue` is provided, then either `toStorageValue` must also be provided,
+ *   or the driver must be configured as `readOnly: true`.
  */
 export type MTFlexValueMappingOptions = (
   | {
@@ -124,8 +126,8 @@ export type MTFlexValueMappingOptions = (
       fromStorageValue: <TOut = unknown>(value: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => TOut | Promise<TOut>;
     }
   | {
-      toStorageValue: (value: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => string | Promise<string>;
-      fromStorageValue?: <TOut = unknown>(value: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => TOut | Promise<TOut>;
+      fromStorageValue: <TOut = unknown>(value: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => TOut | Promise<TOut>;
+      toStorageValue?: (value: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => string | Promise<string>;
       readOnly: true;
     }
 );

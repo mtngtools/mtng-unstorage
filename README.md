@@ -117,8 +117,9 @@ const storage = createStorage({
 ```
 
 Type rules:
-- Provide both `toStorageKey` and `fromStorageKey` together (or neither). Exception: if `readOnly: true`, `fromStorageKey` may be omitted.
-- Provide both `toStorageValue` and `fromStorageValue` together (or neither). Exception: if `readOnly: true`, `fromStorageValue` may be omitted.
+- Mapping hooks are optional; both can be omitted.
+- If `fromStorageKey` is provided, either also provide `toStorageKey` or set `readOnly: true`.
+- If `fromStorageValue` is provided, either also provide `toStorageValue` or set `readOnly: true`.
 
 ## Documentation
 
