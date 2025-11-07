@@ -11,6 +11,7 @@ import { S3Client } from '@aws-sdk/client-s3'
 describe('AWS S3 FLEX Compare E2E', () => {
   let baseStorage: ReturnType<typeof createStorage> | undefined
   let flexStorage: ReturnType<typeof createStorage> | undefined
+  let mountedStorage: ReturnType<typeof createStorage> | undefined
   let s3Client: S3Client | undefined
 
   const isE2EEnabled = process.env.AWS_S3_E2E_ENABLED === 'true'
@@ -46,6 +47,25 @@ describe('AWS S3 FLEX Compare E2E', () => {
       })
     })
 
+    // Create unified storage with both drivers mounted
+    mountedStorage = createStorage()
+    mountedStorage.mount('base', awsS3Driver({
+      s3Client,
+      bucket: testBucket,
+      storagePrefix: baseTestPrefix,
+      base: testPrefix,
+      allowClear: true
+    }))
+    mountedStorage.mount('flex', awsS3FlexDriver({
+      s3Client,
+      bucket: testBucket,
+      storagePrefix: baseTestPrefix,
+      base: testPrefix,
+      allowClear: true,
+      toStorageKey: mapUnstorageKeyToS3Key,
+      fromStorageKey: mapS3ObjectKeyToUnstorageKey
+    }))
+
     await baseStorage.clear()
   })
 
@@ -80,5 +100,46 @@ describe('AWS S3 FLEX Compare E2E', () => {
 
     await baseStorage!.removeItem(key)
     expect(await flexStorage!.hasItem(key)).toBe(false)
+  })
+
+  // Multi-mount testing
+  it.skipIf(!isE2EEnabled)('write to base mount, read from flex mount via unified storage', async () => {
+    const key = 'multi-mount-test'
+    const value = { source: 'base', target: 'flex', ts: Date.now() }
+
+    // Write through base mount
+    await mountedStorage!.setItem(`base:${key}`, value)
+    
+    // Verify it exists in both mounts (same underlying S3 storage)
+    expect(await mountedStorage!.hasItem(`base:${key}`)).toBe(true)
+    expect(await mountedStorage!.hasItem(`flex:${key}`)).toBe(true)
+    
+    // Read through flex mount
+    const retrievedValue = await mountedStorage!.getItem(`flex:${key}`)
+    expect(retrievedValue).toEqual(value)
+    
+    // Clean up through either mount
+    await mountedStorage!.removeItem(`base:${key}`)
+    expect(await mountedStorage!.hasItem(`flex:${key}`)).toBe(false)
+  })
+
+  it.skipIf(!isE2EEnabled)('write to flex mount, read from base mount via unified storage', async () => {
+    const key = 'multi-mount-test-2'
+    const value = { source: 'flex', target: 'base', ts: Date.now() }
+
+    // Write through flex mount
+    await mountedStorage!.setItem(`flex:${key}`, value)
+    
+    // Verify it exists in both mounts (same underlying S3 storage)
+    expect(await mountedStorage!.hasItem(`flex:${key}`)).toBe(true)
+    expect(await mountedStorage!.hasItem(`base:${key}`)).toBe(true)
+    
+    // Read through base mount
+    const retrievedValue = await mountedStorage!.getItem(`base:${key}`)
+    expect(retrievedValue).toEqual(value)
+    
+    // Clean up through either mount
+    await mountedStorage!.removeItem(`flex:${key}`)
+    expect(await mountedStorage!.hasItem(`base:${key}`)).toBe(false)
   })
 })
