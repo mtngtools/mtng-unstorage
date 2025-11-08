@@ -60,17 +60,6 @@ export const filterKeyByDepthByOptions = (
   ) => filterKeyByDepth(key, requestOpts?.maxDepth ?? resolvedDriverOptions.maxDepth ?? undefined);
 
 /**
- * Throws when the driver is in read-only mode.
- *
- * Usage: call with the driver-level `readOnly` flag and the operation name.
- */
-export function checkReadOnly(readOnly: boolean, operation: string): void {
-  if (readOnly) {
-    throw new Error(`Cannot perform ${operation}: driver is in read-only mode`);
-  }
-}
-
-/**
  * Resolved base driver options — canonicalized defaults applied.
  * Fields that drivers rely on at runtime (set by validation helpers) are
  * marked required here so callers implementing mapping functions can rely
@@ -141,14 +130,7 @@ export async function clearByListingAndBatching(args: {
   removeItem: (key: string, opts: any) => Promise<void>;
   batchSize?: number;
 }): Promise<void> {
-  const { opts, baseToClear, resolvedDriverOptions, getKeys, removeItem, batchSize = 100 } = args;
-  const { readOnly, allowClear } = resolvedDriverOptions;
-
-  checkReadOnly(readOnly, 'clear');
-
-  if (!allowClear) {
-    throw new Error('Cannot perform clear: allowClear option must be set to true');
-  }
+  const { opts, baseToClear, getKeys, removeItem, batchSize = 100 } = args;
 
   const keys = await getKeys(baseToClear || '', opts);
 

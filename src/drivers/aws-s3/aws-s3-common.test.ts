@@ -126,11 +126,11 @@ export function registerAwsS3CommonTests(args: {
     })
 
     describe('readOnly mode', () => {
-      it('blocks setItem/removeItem/clear', async () => {
+      it('does not return setItem/removeItem/clear methods', () => {
         const driver = makeDriver({ ...defaultOptionsBase, s3Client: mockClient, readOnly: true })
-        await expect(driver.setItem('k', 'v', {})).rejects.toThrow('driver is in read-only mode')
-        await expect(driver.removeItem('k', {})).rejects.toThrow('driver is in read-only mode')
-        await expect(driver.clear('', {})).rejects.toThrow('driver is in read-only mode')
+        expect(driver.setItem).toBeUndefined()
+        expect(driver.removeItem).toBeUndefined()
+        expect(driver.clear).toBeUndefined()
       })
 
       it('allows read operations', async () => {
@@ -143,22 +143,22 @@ export function registerAwsS3CommonTests(args: {
     })
 
     describe('allowClear option', () => {
-      it('blocks clear when allowClear false', async () => {
+      it('does not return clear when allowClear false', () => {
         const driver = makeDriver({ ...defaultOptionsBase, s3Client: mockClient, allowClear: false })
-        await expect(driver.clear('', {})).rejects.toThrow('allowClear option must be set to true')
+        expect(driver.clear).toBeUndefined()
       })
-      it('blocks clear when allowClear undefined', async () => {
-        const { allowClear, ...rest } = defaultOptionsBase as any
+      it('does not return clear when allowClear undefined', () => {
+        const { allowClear: _, ...rest } = defaultOptionsBase as any
         const driver = makeDriver({ ...rest, s3Client: mockClient })
-        await expect(driver.clear('', {})).rejects.toThrow('allowClear option must be set to true')
+        expect(driver.clear).toBeUndefined()
       })
-      it('allows clear when allowClear true', async () => {
+      it('returns clear when allowClear true', () => {
         const driver = makeDriver({ ...defaultOptionsBase, s3Client: mockClient })
-        await expect(driver.clear('', {})).resolves.toBeUndefined()
+        expect(typeof driver.clear).toBe('function')
       })
-      it('still checks readOnly first', async () => {
-        const driver = makeDriver({ ...defaultOptionsBase, s3Client: mockClient, readOnly: true })
-        await expect(driver.clear('', {})).rejects.toThrow('driver is in read-only mode')
+      it('does not return clear when readOnly is true even if allowClear is true', () => {
+        const driver = makeDriver({ ...defaultOptionsBase, s3Client: mockClient, readOnly: true, allowClear: true })
+        expect(driver.clear).toBeUndefined()
       })
     })
   })
