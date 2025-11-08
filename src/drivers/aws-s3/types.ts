@@ -80,3 +80,9 @@ export type ResolvedAWSS3DriverOptions = Prettify<
  * @deprecated Use ResolvedAWSS3DriverOptions instead. Will be removed in a future major release.
  */
 export type ValidatedAWSS3DriverOptions = ResolvedAWSS3DriverOptions;
+
+/**
+ * Conditional driver type for AWS S3 driver based on options.
+ * Re-exports ConditionalDriver for convenience with S3-specific options.
+ */
+export type { ConditionalDriver } from '../../types.js';

@@ -5,9 +5,14 @@ import { AWS_S3_DRIVER_NAME, AWS_S3_FLEX_DRIVER_NAME } from './types.js'
 import { MockS3Client } from '../../../tests/helpers/mock-s3.js'
 
 // Common test registration for both base and flex S3 drivers using MockS3Client
+import type { AwsS3DriverOptions, AwsS3FlexDriverOptions } from './types.js'
+import type { ConditionalDriver } from '../../types.js'
+
 export function registerAwsS3CommonTests(args: {
   label: string
-  makeDriver: (opts: any) => any
+  makeDriver: <TOptions extends AwsS3DriverOptions | AwsS3FlexDriverOptions>(
+    opts: TOptions
+  ) => ConditionalDriver<TOptions>
 }) {
   const { label, makeDriver } = args
 

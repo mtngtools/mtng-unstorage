@@ -3,11 +3,15 @@ import { createStorage } from 'unstorage'
 import awsS3Driver from './aws-s3.js'
 import awsS3FlexDriver from './aws-s3-flex.js'
 import { MockS3Client } from '../../../tests/helpers/mock-s3.js'
+import type { AwsS3DriverOptions, AwsS3FlexDriverOptions } from './types.js'
+import type { ConditionalDriver } from '../../types.js'
 
 // Common integration test registration for both base and flex S3 drivers using mounted storage instances
 export function registerAwsS3CommonIntegrationTests(args: {
   label: string
-  makeDriver: (opts: any) => any
+  makeDriver: <TOptions extends AwsS3DriverOptions | AwsS3FlexDriverOptions>(
+    opts: TOptions
+  ) => ConditionalDriver<TOptions>
 }) {
   const { label, makeDriver } = args
 
@@ -172,6 +176,31 @@ export function registerAwsS3CommonIntegrationTests(args: {
         expect(driver.clear).toBeUndefined()
       })
 
+      it('TypeScript correctly types read-only driver methods', () => {
+        const driver = makeDriver({ ...defaultOptionsBase, s3Client: mockClient, readOnly: true })
+        
+        // TypeScript should know these methods exist
+        const hasGetItem: typeof driver.getItem = driver.getItem
+        const hasHasItem: typeof driver.hasItem = driver.hasItem
+        const hasGetKeys: typeof driver.getKeys = driver.getKeys
+        
+        // Verify read-only driver type excludes write methods
+        type DriverType = typeof driver
+        type HasSetItem = DriverType extends { setItem: any } ? true : false
+        type HasRemoveItem = DriverType extends { removeItem: any } ? true : false
+        type HasClear = DriverType extends { clear: any } ? true : false
+        
+        // These should be false (methods don't exist)
+        const _setItemCheck: HasSetItem = false
+        const _removeItemCheck: HasRemoveItem = false
+        const _clearCheck: HasClear = false
+        
+        // These assignments should compile (verify types are correct)
+        expect(hasGetItem).toBeDefined()
+        expect(hasHasItem).toBeDefined()
+        expect(hasGetKeys).toBeDefined()
+      })
+
       it('allows read operations via storage interface', async () => {
         mockClient.storage.set('test-prefix/key1', 'value')
         expect(await readOnlyStorage.getItem('readonly:key1')).toBe('value')
@@ -187,8 +216,8 @@ export function registerAwsS3CommonIntegrationTests(args: {
       })
 
       it('does not return clear when allowClear undefined', () => {
-        const { allowClear: _, ...rest } = defaultOptionsBase as any
-        const driver = makeDriver({ ...rest, s3Client: mockClient })
+        const { allowClear: _, ...rest } = defaultOptionsBase
+        const driver = makeDriver({ ...rest, s3Client: mockClient } as typeof defaultOptionsBase)
         expect(driver.clear).toBeUndefined()
       })
 
@@ -199,6 +228,48 @@ export function registerAwsS3CommonIntegrationTests(args: {
       it('does not return clear when readOnly is true even if allowClear is true', () => {
         const driver = makeDriver({ ...defaultOptionsBase, s3Client: mockClient, readOnly: true, allowClear: true })
         expect(driver.clear).toBeUndefined()
+      })
+
+      it('TypeScript correctly types conditional methods based on options', () => {
+        // Test full access driver
+        const fullDriver = makeDriver({ ...defaultOptionsBase, s3Client: mockClient, allowClear: true })
+        const hasSetItem: typeof fullDriver.setItem = fullDriver.setItem
+        const hasRemoveItem: typeof fullDriver.removeItem = fullDriver.removeItem
+        const hasClear: typeof fullDriver.clear = fullDriver.clear
+        expect(hasSetItem).toBeDefined()
+        expect(hasRemoveItem).toBeDefined()
+        expect(hasClear).toBeDefined()
+
+        // Test driver without clear
+        const noClearDriver = makeDriver({ ...defaultOptionsBase, s3Client: mockClient, allowClear: false })
+        const hasSetItem2: typeof noClearDriver.setItem = noClearDriver.setItem
+        const hasRemoveItem2: typeof noClearDriver.removeItem = noClearDriver.removeItem
+        
+        // Verify clear doesn't exist when allowClear is false
+        type NoClearDriverType = typeof noClearDriver
+        type HasClear = NoClearDriverType extends { clear: any } ? true : false
+        const _clearCheck: HasClear = false
+        
+        expect(hasSetItem2).toBeDefined()
+        expect(hasRemoveItem2).toBeDefined()
+      })
+
+      it('TypeScript correctly infers getItem generic types', async () => {
+        const driver = makeDriver({ ...defaultOptionsBase, s3Client: mockClient })
+        
+        // Type inference should work
+        const stringValue = await driver.getItem<string>('test-key')
+        const numberValue = await driver.getItem<number>('test-key')
+        const objectValue = await driver.getItem<{ name: string }>('test-key')
+        
+        // Verify types are correct (compile-time check)
+        const _stringCheck: string | null = stringValue
+        const _numberCheck: number | null = numberValue
+        const _objectCheck: { name: string } | null = objectValue
+        
+        expect(stringValue).toBeNull()
+        expect(numberValue).toBeNull()
+        expect(objectValue).toBeNull()
       })
     })
   })
@@ -217,6 +288,30 @@ describe('aws-s3 base driver (integration)', () => {
     // Cannot directly access driver name through storage interface, but mount succeeds
     expect(testStorage).toBeDefined()
   })
+
+  it('TypeScript correctly types driver when used with createStorage', () => {
+    const testStorage = createStorage()
+    const options: AwsS3DriverOptions = { 
+      s3Client: new MockS3Client() as any, 
+      bucket: 'bucket-1',
+      allowClear: true 
+    }
+    const driver = awsS3Driver(options)
+    
+    // Verify driver has expected methods (runtime check)
+    // TypeScript compile-time checking ensures types are correct
+    expect(driver.getItem).toBeDefined()
+    expect(driver.setItem).toBeDefined()
+    expect(driver.clear).toBeDefined()
+    
+    // Type-level verification: driver should be assignable to ConditionalDriver
+    type DriverType = typeof driver
+    type IsConditionalDriver = DriverType extends ConditionalDriver<typeof options> ? true : false
+    const _typeCheck: IsConditionalDriver = true
+    
+    testStorage.mount('test', driver)
+    expect(testStorage).toBeDefined()
+  })
 })
 
 describe('aws-s3 flex driver (integration)', () => {
@@ -229,6 +324,30 @@ describe('aws-s3 flex driver (integration)', () => {
     const testStorage = createStorage()
     testStorage.mount('test', awsS3FlexDriver({ s3Client: new MockS3Client() as any, bucket: 'bucket-1' }))
     // Cannot directly access driver name through storage interface, but mount succeeds
+    expect(testStorage).toBeDefined()
+  })
+
+  it('TypeScript correctly types flex driver when used with createStorage', () => {
+    const testStorage = createStorage()
+    const options: AwsS3FlexDriverOptions = { 
+      s3Client: new MockS3Client() as any, 
+      bucket: 'bucket-1',
+      allowClear: true 
+    }
+    const driver = awsS3FlexDriver(options)
+    
+    // Verify driver has expected methods (runtime check)
+    // TypeScript compile-time checking ensures types are correct
+    expect(driver.getItem).toBeDefined()
+    expect(driver.setItem).toBeDefined()
+    expect(driver.clear).toBeDefined()
+    
+    // Type-level verification: driver should be assignable to ConditionalDriver
+    type DriverType = typeof driver
+    type IsConditionalDriver = DriverType extends ConditionalDriver<typeof options> ? true : false
+    const _typeCheck: IsConditionalDriver = true
+    
+    testStorage.mount('test', driver)
     expect(testStorage).toBeDefined()
   })
 })

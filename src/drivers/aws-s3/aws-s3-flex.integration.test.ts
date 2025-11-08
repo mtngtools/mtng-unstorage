@@ -3,6 +3,8 @@ import { createStorage } from 'unstorage'
 import awsS3FlexDriver from './aws-s3-flex.js'
 import { MockS3Client } from '../../../tests/helpers/mock-s3.js'
 import { mapS3ObjectKeyToUnstorageKey, mapUnstorageKeyToS3Key, toS3KeyWithJSONExt } from './shared.js'
+import type { AwsS3FlexDriverOptions } from './types.js'
+import type { ConditionalDriver } from '../../types.js'
 
 describe('aws-s3-flex driver integration', () => {
   let mockClient: MockS3Client
@@ -221,6 +223,72 @@ describe('aws-s3-flex driver integration', () => {
       // Set data and try to retrieve it; driver returns null on mapping errors
       await storage.setItem('error:key', 'value')
       await expect(storage.getItem('error:key')).resolves.toBeNull()
+    })
+  })
+
+  describe('TypeScript type checking', () => {
+    it('correctly types flex driver with value mapping', () => {
+      const options: AwsS3FlexDriverOptions = {
+        s3Client: mockClient as any,
+        bucket: 'test-bucket',
+        allowClear: true,
+        toStorageValue: (v) => JSON.stringify(v),
+        fromStorageValue: (v: string) => JSON.parse(v),
+      }
+      const driver = awsS3FlexDriver(options)
+      
+      // Verify driver has expected methods (runtime check)
+      expect(driver.getItem).toBeDefined()
+      expect(driver.setItem).toBeDefined()
+      expect(driver.clear).toBeDefined()
+      
+      // Type-level verification: driver should be assignable to ConditionalDriver
+      type DriverType = typeof driver
+      type IsConditionalDriver = DriverType extends ConditionalDriver<typeof options> ? true : false
+      const _typeCheck: IsConditionalDriver = true
+    })
+
+    it('correctly infers return types from fromStorageValue', async () => {
+      const driver = awsS3FlexDriver({
+        s3Client: mockClient as any,
+        bucket: 'test-bucket',
+        allowClear: true,
+        fromStorageValue: (v: string) => JSON.parse(v),
+      })
+      
+      // Type inference should work with generic
+      const userValue = await driver.getItem<{ name: string }>('test-key')
+      // TypeScript should correctly infer the return type
+      const _userCheck: { name: string } | null = userValue
+      
+      expect(userValue).toBeNull()
+    })
+
+    it('correctly types read-only flex driver', () => {
+      const options: AwsS3FlexDriverOptions = {
+        s3Client: mockClient as any,
+        bucket: 'test-bucket',
+        readOnly: true,
+        fromStorageValue: (v: string) => JSON.parse(v),
+      }
+      const driver = awsS3FlexDriver(options)
+      
+      // Runtime check: read-only driver should not have write methods
+      expect(driver.setItem).toBeUndefined()
+      expect(driver.removeItem).toBeUndefined()
+      expect(driver.clear).toBeUndefined()
+      expect(driver.getItem).toBeDefined()
+      
+      // Type-level verification: driver should exclude write methods
+      type DriverType = typeof driver
+      type HasSetItem = DriverType extends { setItem: any } ? true : false
+      type HasRemoveItem = DriverType extends { removeItem: any } ? true : false
+      type HasClear = DriverType extends { clear: any } ? true : false
+      
+      // These should be false (methods don't exist)
+      const _setItemCheck: HasSetItem = false
+      const _removeItemCheck: HasRemoveItem = false
+      const _clearCheck: HasClear = false
     })
   })
 
