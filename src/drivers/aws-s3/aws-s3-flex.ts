@@ -4,12 +4,38 @@ import type { AwsS3FlexDriverOptions, S3PutObjectOptions } from './types';
 import { mapUnstorageKeyToS3Key, validateS3Options, createS3Client, mapS3ObjectKeyToUnstorageKey, getS3Body, putS3Object, deleteS3Object, listS3KeysMapped, getS3Head } from './shared.js';
 import { clearByListingAndBatching, streamToString } from '../../utils.js';
 import { AWS_S3_FLEX_DRIVER_NAME } from './types.js';
-import { MTBaseDriverRequestOptions } from '../../types.js';
+import type { MTBaseDriverRequestOptions, ConditionalDriver } from '../../types.js';
 
-/*
- * AWS S3 storage driver for unstorage
- * - Uses driver-local helpers in `./shared.ts` for S3-specific behavior
- * - Uses general helpers from `../../utils.ts` where applicable
+/**
+ * AWS S3 Flex storage driver for unstorage with custom key and value mapping.
+ * 
+ * This driver extends the base S3 driver with support for custom mapping functions:
+ * - `toStorageKey` / `fromStorageKey`: Custom key transformation
+ * - `toStorageValue` / `fromStorageValue`: Custom value transformation with type inference
+ * 
+ * The driver provides conditional method availability based on options:
+ * - When `readOnly: true`: `setItem`, `removeItem`, and `clear` are not available
+ * - When `allowClear: false` or undefined: `clear` is not available (unless readOnly is true)
+ * 
+ * The return type is conditionally typed based on the provided options, ensuring
+ * TypeScript can detect when methods are unavailable.
+ * 
+ * @example
+ * ```typescript
+ * // With value mapping and type inference
+ * const driver = awsS3FlexDriver({
+ *   bucket: 'my-bucket',
+ *   toStorageValue: (v) => JSON.stringify(v),
+ *   fromStorageValue: <T>(v: string) => JSON.parse(v) as T
+ * });
+ * 
+ * // TypeScript infers the return type from fromStorageValue
+ * const user = await driver.getItem<{ name: string }>('user:123');
+ * // user is typed as { name: string } | null
+ * ```
+ * 
+ * Uses driver-local helpers in `./shared.ts` for S3-specific behavior
+ * and general helpers from `../../utils.ts` where applicable.
  */
 export default defineDriver((options: AwsS3FlexDriverOptions) => {
   // We'll resolve mappers after validation so defaults can reference the
@@ -52,7 +78,31 @@ export default defineDriver((options: AwsS3FlexDriverOptions) => {
     }
   }
 
-  async function getItem(key: string, opts?: MTBaseDriverRequestOptions): Promise<any> {
+  /**
+   * Retrieves an item from S3 storage with optional value transformation.
+   * 
+   * If `fromStorageValue` is provided in the driver options, it will be used to
+   * transform the raw string value into the typed value. The generic type parameter
+   * flows through to the mapper function for proper type inference.
+   * 
+   * @template T - The expected return type. Defaults to `unknown`.
+   * @param key - The storage key to retrieve
+   * @param opts - Optional request options (e.g., maxDepth)
+   * @returns The item value as type T (transformed if fromStorageValue is provided), or null if not found
+   * 
+   * @example
+   * ```typescript
+   * // With value mapping - type inferred from fromStorageValue
+   * const driver = awsS3FlexDriver({
+   *   bucket: 'my-bucket',
+   *   fromStorageValue: <T>(v: string) => JSON.parse(v) as T
+   * });
+   * 
+   * const user = await driver.getItem<{ name: string }>('user:123');
+   * // user is typed as { name: string } | null
+   * ```
+   */
+  async function getItem<T = unknown>(key: string, opts?: MTBaseDriverRequestOptions): Promise<T | null> {
     try {
       const body = await getS3Body(client, {
         Bucket,
@@ -62,9 +112,9 @@ export default defineDriver((options: AwsS3FlexDriverOptions) => {
       const content = await streamToString(body);
       // If a fromStorageValue mapper is provided, transform raw string to typed value
       if (fromStorageValue) {
-        return await fromStorageValue(content, resolvedDriverOptions as any, opts);
+        return await fromStorageValue<T>(content, resolvedDriverOptions as any, opts);
       }
-      return content;
+      return content as T;
     } catch (error: any) {
       return null;
     }
@@ -118,7 +168,7 @@ export default defineDriver((options: AwsS3FlexDriverOptions) => {
   }
 
   // Build return object conditionally based on options
-  const driver: any = {
+  const driver = {
     name,
     flags: {
       maxDepth: true,
@@ -126,18 +176,14 @@ export default defineDriver((options: AwsS3FlexDriverOptions) => {
     hasItem,
     getItem,
     getKeys,
-  };
-
-  // Only include write methods if not read-only
-  if (!readOnly) {
-    driver.setItem = setItem;
-    driver.removeItem = removeItem;
-  }
-
-  // Only include clear if not read-only AND allowClear is true
-  if (!readOnly && allowClear) {
-    driver.clear = clear;
-  }
+    ...(!readOnly && {
+      setItem,
+      removeItem,
+    }),
+    ...(!readOnly && allowClear && {
+      clear,
+    }),
+  } as ConditionalDriver<typeof resolvedDriverOptions>;
 
   return driver;
 });

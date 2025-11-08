@@ -1,5 +1,13 @@
 // Export types
-export type { MTBaseDriverOptions } from './types.js';
+export type { 
+  MTBaseDriverOptions,
+  MTBaseDriverRequestOptions,
+  ConditionalDriver,
+  ReadOnlyDriver,
+  WritableDriver,
+  WritableDriverWithoutClear,
+  BaseDriverMethods
+} from './types.js';
 
 // Export utilities
 export { 

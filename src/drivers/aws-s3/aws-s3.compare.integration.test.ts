@@ -4,6 +4,8 @@ import awsS3Driver from './aws-s3.js'
 import awsS3FlexDriver from './aws-s3-flex.js'
 import { mapS3ObjectKeyToUnstorageKey, mapUnstorageKeyToS3Key, joinS3Key } from './shared.js'
 import { MockS3Client } from '../../../tests/helpers/mock-s3.js'
+import type { AwsS3DriverOptions, AwsS3FlexDriverOptions } from './types.js'
+import type { ConditionalDriver } from '../../types.js'
 
 describe('aws-s3 driver comparison via storage.mount()', () => {
   let mockClient1: MockS3Client
@@ -228,10 +230,50 @@ describe('aws-s3 driver comparison via storage.mount()', () => {
 
       expect(flexKeysStripped).toEqual(baseKeysStripped)
 
-      // Cleanup via base mount
-      for (const k of baseKeysStripped) {
-        await storage.removeItem(`base:${k}`)
+        // Cleanup via base mount
+        for (const k of baseKeysStripped) {
+          await storage.removeItem(`base:${k}`)
+        }
+      })
+    })
+
+  describe('TypeScript type checking across multiple mounts', () => {
+    it('correctly types drivers when mounted together', () => {
+      const baseOptions: AwsS3DriverOptions = {
+        s3Client: mockClient1 as any,
+        bucket: 'user-bucket',
+        storagePrefix: 'app-users/',
+        allowClear: true
       }
+      const flexOptions: AwsS3FlexDriverOptions = {
+        s3Client: mockClient2 as any,
+        bucket: 'session-bucket',
+        storagePrefix: 'app-sessions/',
+        allowClear: true,
+        toStorageKey: (key: string, opts) => joinS3Key(opts.fullBasePrefix, `session-${key}.json`),
+        fromStorageKey: (s3Key: string, opts) => mapS3ObjectKeyToUnstorageKey(s3Key, opts).replace(/^session-/, '').replace(/\.json$/, '')
+      }
+
+      const baseDriver = awsS3Driver(baseOptions)
+      const flexDriver = awsS3FlexDriver(flexOptions)
+
+      // Runtime check: both should have all methods (allowClear: true)
+      expect(baseDriver.clear).toBeDefined()
+      expect(flexDriver.clear).toBeDefined()
+
+      // Type-level verification: drivers should be assignable to ConditionalDriver
+      type BaseDriverType = typeof baseDriver
+      type FlexDriverType = typeof flexDriver
+      type BaseIsConditional = BaseDriverType extends ConditionalDriver<typeof baseOptions> ? true : false
+      type FlexIsConditional = FlexDriverType extends ConditionalDriver<typeof flexOptions> ? true : false
+      const _baseTypeCheck: BaseIsConditional = true
+      const _flexTypeCheck: FlexIsConditional = true
+
+      // Mount both
+      const testStorage = createStorage()
+      testStorage.mount('users', baseDriver)
+      testStorage.mount('sessions', flexDriver)
+      expect(testStorage).toBeDefined()
     })
   })
 

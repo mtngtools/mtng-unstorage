@@ -4,12 +4,31 @@ import type { AwsS3DriverOptions, S3PutObjectOptions } from './types';
 import { mapUnstorageKeyToS3Key, validateS3Options, createS3Client, mapS3ObjectKeyToUnstorageKey, getS3Body, putS3Object, deleteS3Object, listS3KeysMapped, getS3Head } from './shared.js';
 import { streamToString, clearByListingAndBatching } from '../../utils.js';
 import { AWS_S3_DRIVER_NAME } from './types.js';
-import { MTBaseDriverRequestOptions } from '../../types.js';
+import type { MTBaseDriverRequestOptions, ConditionalDriver } from '../../types.js';
 
-/*
- * AWS S3 storage driver for unstorage
- * - Uses driver-local helpers in `./shared.ts` for S3-specific behavior
- * - Uses general helpers from `../../utils.ts` where applicable
+/**
+ * AWS S3 storage driver for unstorage.
+ * 
+ * This driver provides conditional method availability based on options:
+ * - When `readOnly: true`: `setItem`, `removeItem`, and `clear` are not available
+ * - When `allowClear: false` or undefined: `clear` is not available (unless readOnly is true)
+ * 
+ * The return type is conditionally typed based on the provided options, ensuring
+ * TypeScript can detect when methods are unavailable.
+ * 
+ * @example
+ * ```typescript
+ * // Read-only driver - only read methods available
+ * const readOnlyDriver = awsS3Driver({ bucket: 'my-bucket', readOnly: true });
+ * // TypeScript knows: readOnlyDriver.setItem is undefined
+ * 
+ * // Full access driver with clear enabled
+ * const fullDriver = awsS3Driver({ bucket: 'my-bucket', allowClear: true });
+ * // TypeScript knows: fullDriver.clear is available
+ * ```
+ * 
+ * Uses driver-local helpers in `./shared.ts` for S3-specific behavior
+ * and general helpers from `../../utils.ts` where applicable.
  */
 export default defineDriver((options: AwsS3DriverOptions) => {
   const resolvedDriverOptions = validateS3Options({
@@ -38,7 +57,26 @@ export default defineDriver((options: AwsS3DriverOptions) => {
     }
   }
 
-  async function getItem(key: string, _opts?: any): Promise<any> {
+  /**
+   * Retrieves an item from S3 storage.
+   * 
+   * @template T - The expected return type. Defaults to `unknown`.
+   * @param key - The storage key to retrieve
+   * @param _opts - Optional request options (e.g., maxDepth)
+   * @returns The item value as type T, or null if not found
+   * 
+   * @example
+   * ```typescript
+   * // Type inference
+   * const value = await driver.getItem<string>('my-key');
+   * // value is typed as string | null
+   * 
+   * // With automatic deserialization
+   * const data = await driver.getItem<{ name: string }>('user:123');
+   * // data is typed as { name: string } | null
+   * ```
+   */
+  async function getItem<T = unknown>(key: string, _opts?: MTBaseDriverRequestOptions): Promise<T | null> {
     // console.debug(`aws-s3 storage getItem -- KEY: ${key}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
     try {
       const body = await getS3Body(client, {
@@ -49,7 +87,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
 
       const content = await streamToString(body);
       // Return the raw string - the Storage layer will handle deserialization
-      return content;
+      return content as T;
     } catch (error: any) {
       return null;
     }
@@ -58,7 +96,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
   async function setItem(
     key: string,
     value: string,
-    opts?: { s3Options?: S3PutObjectOptions },
+    opts?: MTBaseDriverRequestOptions & { s3Options?: S3PutObjectOptions },
   ): Promise<void> {
     // console.debug(`aws-s3 storage setItem -- KEY: ${key}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
     await putS3Object(
@@ -72,7 +110,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
     );
   }
 
-  async function removeItem(key: string, _opts: any): Promise<void> {
+  async function removeItem(key: string, _opts?: MTBaseDriverRequestOptions): Promise<void> {
     // console.debug(`aws-s3 storage removeItem -- KEY: ${key}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
     await deleteS3Object(client, {
       Bucket,
@@ -80,7 +118,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
     });
   }
 
-  async function getKeys(basePrefix: string, opts: any): Promise<string[]> {
+  async function getKeys(basePrefix: string, opts?: MTBaseDriverRequestOptions): Promise<string[]> {
     // console.debug(`aws-s3 storage getKeys -- basePrefix: ${basePrefix}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
     return await listS3KeysMapped(
       client,
@@ -91,7 +129,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
     );
   }
 
-  async function clear(base: string, opts: any): Promise<void> {
+  async function clear(base: string, opts?: MTBaseDriverRequestOptions): Promise<void> {
     // console.debug(`aws-s3 storage clear -- base: ${base}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
     await clearByListingAndBatching({
       opts,
@@ -104,7 +142,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
   }
 
   // Build return object conditionally based on options
-  const driver: any = {
+  const driver = {
     name,
     flags: {
       maxDepth: true,
@@ -112,18 +150,14 @@ export default defineDriver((options: AwsS3DriverOptions) => {
     hasItem,
     getItem,
     getKeys,
-  };
-
-  // Only include write methods if not read-only
-  if (!readOnly) {
-    driver.setItem = setItem;
-    driver.removeItem = removeItem;
-  }
-
-  // Only include clear if not read-only AND allowClear is true
-  if (!readOnly && allowClear) {
-    driver.clear = clear;
-  }
+    ...(!readOnly && {
+      setItem,
+      removeItem,
+    }),
+    ...(!readOnly && allowClear && {
+      clear,
+    }),
+  } as ConditionalDriver<typeof resolvedDriverOptions>;
 
   return driver;
 });

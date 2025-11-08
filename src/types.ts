@@ -147,3 +147,56 @@ export type MTBaseDriverRequestOptions = {
    */
   maxDepth?: number
 }
+
+/**
+ * Base driver interface with all possible methods.
+ * This represents the full set of methods a driver can implement.
+ */
+export type BaseDriverMethods = {
+  name: string;
+  flags: { maxDepth: boolean };
+  hasItem: (key: string, opts?: MTBaseDriverRequestOptions) => Promise<boolean>;
+  getItem: <T = unknown>(key: string, opts?: MTBaseDriverRequestOptions) => Promise<T | null>;
+  getKeys: (basePrefix: string, opts?: MTBaseDriverRequestOptions) => Promise<string[]>;
+  setItem?: (key: string, value: string, opts?: MTBaseDriverRequestOptions) => Promise<void>;
+  removeItem?: (key: string, opts?: MTBaseDriverRequestOptions) => Promise<void>;
+  clear?: (base: string, opts?: MTBaseDriverRequestOptions) => Promise<void>;
+};
+
+/**
+ * Helper type to extract boolean value (handles both optional and required booleans)
+ */
+type BooleanValue<T> = T extends boolean ? T : T extends true ? true : false;
+
+/**
+ * Conditional driver type that infers available methods based on driver options.
+ * 
+ * - If `readOnly` is true: excludes `setItem`, `removeItem`, and `clear`
+ * - If `allowClear` is false or undefined: excludes `clear` (unless readOnly is true)
+ * - Otherwise: includes all methods
+ * 
+ * Works with both input options (optional booleans) and resolved options (required booleans).
+ * 
+ * @template TOptions - The driver options type (must extend MTBaseDriverOptions or ResolvedMTBaseDriverOptions)
+ */
+export type ConditionalDriver<TOptions extends { readOnly?: boolean; allowClear?: boolean } | { readOnly: boolean; allowClear: boolean }> = 
+  BooleanValue<TOptions['readOnly']> extends true
+    ? Omit<BaseDriverMethods, 'setItem' | 'removeItem' | 'clear'>
+    : BooleanValue<TOptions['allowClear']> extends true
+    ? BaseDriverMethods
+    : Omit<BaseDriverMethods, 'clear'>;
+
+/**
+ * Type for a read-only driver (no write methods).
+ */
+export type ReadOnlyDriver = Omit<BaseDriverMethods, 'setItem' | 'removeItem' | 'clear'>;
+
+/**
+ * Type for a writable driver with all methods (including clear).
+ */
+export type WritableDriver = BaseDriverMethods;
+
+/**
+ * Type for a writable driver without clear method.
+ */
+export type WritableDriverWithoutClear = Omit<BaseDriverMethods, 'clear'>;
