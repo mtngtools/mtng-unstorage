@@ -1,8 +1,12 @@
 import { defineConfig } from 'vitest/config';
 import dts from 'vite-plugin-dts';
+import oxlint from 'vite-plugin-oxlint';
 
 export default defineConfig({
   plugins: [
+    // @ts-ignore
+    oxlint(),
+    // @ts-ignore
     dts({
       insertTypesEntry: true,
       include: ['src/**/*'],
