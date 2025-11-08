@@ -66,6 +66,10 @@ Agent behavior—organization rules
     - When multiple issues are impacted, list each reference comma-separated on the first line, and list each on its own line with details at the bottom of the commit message.
 - Feature branches are allowed locally for isolation, but do not push them or open PRs until the above gating conditions are met, unless a maintainer explicitly asks for a draft PR for review.
 - Any release or tag creation should be coordinated and follow the organization's release checklist; prefer creating PRs that include release notes rather than creating tags directly from agents.
+- Chat agent communication: When chat agents reference GitHub issues or pull requests in their output, they must format them as clickable markdown links. For example:
+  - Use `[Issue #123](https://github.com/org/repo/issues/123)` instead of plain URLs
+  - Use `[PR #45](https://github.com/org/repo/pull/45)` instead of plain URLs
+  - This improves readability and user experience in chat interfaces.
 - Do not start work on features or bug fixes if:
   - you are on the `main` branch or another protected branch
   - there is no GitHub issue or task tracking the work
