@@ -47,10 +47,23 @@ Agent behavior—organization rules
 - Commit & PR gating: do not commit or push code changes until BOTH of the following are true:
   1. The local prepublish pipeline has succeeded (either run the repository's `prepublishOnly` script, or run the equivalent sequence: typecheck → lint → build → unit tests).
   2. A human maintainer has explicitly approved committing/pushing (for example: a comment like "go ahead and commit/push" or an approved PR review). If a maintainer says "don't commit", do not commit. Keep changes in the working tree or as staged diffs only.
-- Commit message policy (code changes): every commit that changes code (non-docs-only) must reference the GitHub issue it affects. Use one of the following patterns at the end of the message:
-  - "Addresses #<issue>" or "Refs #<issue>" for ongoing work that should not auto-close the issue.
-  - "Closes #<issue>" only when the commit definitively resolves the issue and auto-closing is desired.
-  - When multiple issues are impacted, list each reference on its own line.
+- Commit message policy: 
+  - Following conventional commit guidelines: `https://www.conventionalcommits.org/en/v1.0.0/#summary`
+  - Unless an exception is human-approved, always include a reference to the affected issue on the first line (so it appears in GitHub commit lists), for example:  
+    - feat(api)!: return data to client (#123)
+  - If the issue number is not known, request it from human maintainers before committing, or obtain permission to proceed without an issue number.
+  - Add further details about issue in bottom of body:
+    - Use "close, closes, closed, fix, fixes, fixed, resolve, resolves, resolved" as supported by GitHub, if issue is complete. For example:
+      ```
+      feat(api)!: return data to the client (#123)
+
+      This change returns data to the client as in a special way.
+
+      Closes #123
+      ``` 
+    - Otherwise, use "addresses" or "refs" to indicate ongoing work.
+    - Use BREAKING CHANGE to indicate breaking changes.
+    - When multiple issues are impacted, list each reference comma-separated on the first line, and list each on its own line with details at the bottom of the commit message.
 - Feature branches are allowed locally for isolation, but do not push them or open PRs until the above gating conditions are met, unless a maintainer explicitly asks for a draft PR for review.
 - Any release or tag creation should be coordinated and follow the organization's release checklist; prefer creating PRs that include release notes rather than creating tags directly from agents.
 - Do not start work on features or bug fixes if:
@@ -70,8 +83,8 @@ These rules govern how automated agents should call tools, access network servic
 - Use the `gh` CLI or provider APIs only when necessary and with explicit intent. When updating releases or creating tags programmatically, prefer creating a PR that documents the intent and includes the release notes; a maintainer can then merge the PR to trigger release automation.
 - Temporary files created to interact with remote services (for example temporary `RELEASE_BODY_*.md` used with `gh release create`) must be deleted before finishing the run and must not be committed to the repository.
 - Agents must be conservative with writes: prefer opening a PR with minimal diffs rather than pushing directly to protected branches. Server-side protections (branch rules) are the authoritative enforcement mechanism.
-- When an agent needs to perform destructive or privileged operations (publish to npm, create GitHub releases, modify branch protection rules), require an explicit approval step recorded in a PR or an issue comment from a maintainer.
-- Logging and audit: agents should emit concise logs describing the actions they intend to perform (why/what/outcome) and any external calls; these logs should avoid leaking secrets and be stored where maintainers can inspect them (for example CI logs or a secured artifact store).
+- When an agent needs to perform destructive or privileged operations (e.g., publish to npm, create GitHub releases, or modify branch protection rules), require an explicit approval step recorded in a PR or an issue comment from a maintainer.
+- Logging and audit: Agents should emit concise logs describing the actions they intend to perform (why/what/outcome) and any external calls. These logs must avoid leaking secrets and should be stored in CI job output or a secure artifact store; avoid writing logs to the repository or other public locations.
 
 
 ----
