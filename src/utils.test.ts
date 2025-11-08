@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { validateKey, serialize, deserialize } from './utils.js';
-import { filterKeyByDepth, checkReadOnly, streamToString } from './utils.js';
+import { filterKeyByDepth, streamToString } from './utils.js';
 
 describe('Utils', () => {
   // removed legacy serialize/deserialize tests
@@ -78,16 +78,6 @@ describe('Utils', () => {
       expect(filterKeyByDepth('top:child', 1)).toBe(true)
       expect(filterKeyByDepth('a:b:c:d', 2)).toBe(false)
       expect(filterKeyByDepth('a:b:c', 2)).toBe(true)
-    })
-  })
-
-  describe('checkReadOnly', () => {
-    it('should throw when readOnly is true', () => {
-      expect(() => checkReadOnly(true, 'setItem')).toThrow('Cannot perform setItem: driver is in read-only mode')
-    })
-
-    it('should not throw when readOnly is false', () => {
-      expect(() => checkReadOnly(false, 'setItem')).not.toThrow()
     })
   })
 

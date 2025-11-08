@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { createStorage } from 'unstorage'
 import awsS3Driver from './aws-s3.js'
 import awsS3FlexDriver from './aws-s3-flex.js'
-import { AWS_S3_DRIVER_NAME, AWS_S3_FLEX_DRIVER_NAME } from './types.js'
 import { MockS3Client } from '../../../tests/helpers/mock-s3.js'
 
 // Common integration test registration for both base and flex S3 drivers using mounted storage instances
@@ -166,10 +165,11 @@ export function registerAwsS3CommonIntegrationTests(args: {
         readOnlyStorage.mount('readonly', makeDriver({ ...defaultOptionsBase, s3Client: mockClient, readOnly: true }))
       })
 
-      it('blocks setItem/removeItem/clear via storage interface', async () => {
-        await expect(readOnlyStorage.setItem('readonly:k', 'v')).rejects.toThrow('driver is in read-only mode')
-        await expect(readOnlyStorage.removeItem('readonly:k')).rejects.toThrow('driver is in read-only mode')
-        await expect(readOnlyStorage.clear('readonly')).rejects.toThrow('driver is in read-only mode')
+      it('does not have setItem/removeItem/clear methods on driver', () => {
+        const driver = makeDriver({ ...defaultOptionsBase, s3Client: mockClient, readOnly: true })
+        expect(driver.setItem).toBeUndefined()
+        expect(driver.removeItem).toBeUndefined()
+        expect(driver.clear).toBeUndefined()
       })
 
       it('allows read operations via storage interface', async () => {
@@ -181,27 +181,24 @@ export function registerAwsS3CommonIntegrationTests(args: {
     })
 
     describe('allowClear option', () => {
-      it('blocks clear when allowClear false via storage interface', async () => {
-        const noClearStorage = createStorage()
-        noClearStorage.mount('noclear', makeDriver({ ...defaultOptionsBase, s3Client: mockClient, allowClear: false }))
-        await expect(noClearStorage.clear('noclear')).rejects.toThrow('allowClear option must be set to true')
+      it('does not return clear when allowClear false', () => {
+        const driver = makeDriver({ ...defaultOptionsBase, s3Client: mockClient, allowClear: false })
+        expect(driver.clear).toBeUndefined()
       })
 
-      it('blocks clear when allowClear undefined via storage interface', async () => {
-        const { allowClear, ...rest } = defaultOptionsBase as any
-        const undefinedClearStorage = createStorage()
-        undefinedClearStorage.mount('undefined', makeDriver({ ...rest, s3Client: mockClient }))
-        await expect(undefinedClearStorage.clear('undefined')).rejects.toThrow('allowClear option must be set to true')
+      it('does not return clear when allowClear undefined', () => {
+        const { allowClear: _, ...rest } = defaultOptionsBase as any
+        const driver = makeDriver({ ...rest, s3Client: mockClient })
+        expect(driver.clear).toBeUndefined()
       })
 
-      it('allows clear when allowClear true via storage interface', async () => {
+      it('returns clear when allowClear true via storage interface', async () => {
         await expect(storage.clear('data')).resolves.toBeUndefined()
       })
 
-      it('still checks readOnly first via storage interface', async () => {
-        const readOnlyNoClearStorage = createStorage()
-        readOnlyNoClearStorage.mount('readonly', makeDriver({ ...defaultOptionsBase, s3Client: mockClient, readOnly: true }))
-        await expect(readOnlyNoClearStorage.clear('readonly')).rejects.toThrow('driver is in read-only mode')
+      it('does not return clear when readOnly is true even if allowClear is true', () => {
+        const driver = makeDriver({ ...defaultOptionsBase, s3Client: mockClient, readOnly: true, allowClear: true })
+        expect(driver.clear).toBeUndefined()
       })
     })
   })

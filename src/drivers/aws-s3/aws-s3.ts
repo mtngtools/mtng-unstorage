@@ -2,7 +2,7 @@ import type { PutObjectCommandInput } from '@aws-sdk/client-s3';
 import { defineDriver } from 'unstorage';
 import type { AwsS3DriverOptions, S3PutObjectOptions } from './types';
 import { mapUnstorageKeyToS3Key, validateS3Options, createS3Client, mapS3ObjectKeyToUnstorageKey, getS3Body, putS3Object, deleteS3Object, listS3KeysMapped, getS3Head } from './shared.js';
-import { checkReadOnly, streamToString, clearByListingAndBatching } from '../../utils.js';
+import { streamToString, clearByListingAndBatching } from '../../utils.js';
 import { AWS_S3_DRIVER_NAME } from './types.js';
 import { MTBaseDriverRequestOptions } from '../../types.js';
 
@@ -18,7 +18,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
     storagePrefix: options.storagePrefix ?? options.s3StoragePrefix ?? '',
   });
 
-  const { bucket: Bucket, name, readOnly = false } = resolvedDriverOptions;
+  const { bucket: Bucket, name, readOnly = false, allowClear = false } = resolvedDriverOptions;
 
   // Build client if not provided using shared helper
   const client = createS3Client(resolvedDriverOptions);
@@ -61,7 +61,6 @@ export default defineDriver((options: AwsS3DriverOptions) => {
     opts?: { s3Options?: S3PutObjectOptions },
   ): Promise<void> {
     // console.debug(`aws-s3 storage setItem -- KEY: ${key}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
-    checkReadOnly(readOnly, 'setItem');
     await putS3Object(
       client,
       {
@@ -75,8 +74,6 @@ export default defineDriver((options: AwsS3DriverOptions) => {
 
   async function removeItem(key: string, _opts: any): Promise<void> {
     // console.debug(`aws-s3 storage removeItem -- KEY: ${key}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
-    checkReadOnly(readOnly, 'removeItem');
-
     await deleteS3Object(client, {
       Bucket,
       Key: mapUnstorageKeyToS3Key(key, resolvedDriverOptions),
@@ -106,16 +103,27 @@ export default defineDriver((options: AwsS3DriverOptions) => {
     });
   }
 
-  return {
+  // Build return object conditionally based on options
+  const driver: any = {
     name,
     flags: {
       maxDepth: true,
     },
     hasItem,
     getItem,
-    setItem,
-    removeItem,
     getKeys,
-    clear,
   };
+
+  // Only include write methods if not read-only
+  if (!readOnly) {
+    driver.setItem = setItem;
+    driver.removeItem = removeItem;
+  }
+
+  // Only include clear if not read-only AND allowClear is true
+  if (!readOnly && allowClear) {
+    driver.clear = clear;
+  }
+
+  return driver;
 });
