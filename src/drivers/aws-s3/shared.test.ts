@@ -121,8 +121,8 @@ describe('shared S3 helpers', () => {
     const resolved = makeResolved({ storagePrefix: 'root', base: 'app' })
 
     it('toS3KeyWithJSONExt appends .json only once', () => {
-      expect(toS3KeyWithJSONExt('user:123', resolved)).toBe('root/app/user:123.json')
-      expect(toS3KeyWithJSONExt('folder:config', resolved)).toBe('root/app/folder:config.json')
+      expect(toS3KeyWithJSONExt('user:123', resolved)).toBe('root/app/user/123.json')
+      expect(toS3KeyWithJSONExt('folder:config', resolved)).toBe('root/app/folder/config.json')
     })
 
     it('fromS3KeyWithJSONExt strips .json and removes base prefix', () => {
