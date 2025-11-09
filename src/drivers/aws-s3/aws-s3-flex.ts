@@ -73,7 +73,7 @@ export default defineDriver((options: AwsS3FlexDriverOptions) => {
         Key: mapToS3Key(key, resolvedDriverOptions, opts),
       });
       return true;
-    } catch (error: any) {
+    } catch  {
       return false;
     }
   }
@@ -115,7 +115,7 @@ export default defineDriver((options: AwsS3FlexDriverOptions) => {
         return await fromStorageValue<T>(content, resolvedDriverOptions as any, opts);
       }
       return content as T;
-    } catch (error: any) {
+    } catch {
       return null;
     }
   }

@@ -5,8 +5,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createStorage } from 'unstorage';
 import awsS3FlexDriver from '../src/drivers/aws-s3/aws-s3-flex';
-import { S3Client, HeadObjectCommand } from '@aws-sdk/client-s3';
-import { joinS3Key, toS3KeyWithJSONExt, fromS3KeyWithJSONExt } from '../src/drivers/aws-s3/shared';
+import { S3Client } from '@aws-sdk/client-s3';
+// import { HeadObjectCommand } from '@aws-sdk/client-s3';
+// import { joinS3Key } from '../src/drivers/aws-s3/shared';
+import { toS3KeyWithJSONExt, fromS3KeyWithJSONExt } from '../src/drivers/aws-s3/shared';
 
 const isE2EEnabled = process.env.AWS_S3_E2E_ENABLED === 'true';
 const d = isE2EEnabled ? describe : describe.skip;
@@ -20,7 +22,7 @@ const base = 'aws-s3-flex/';
 d('[e2e] AWS S3 FLEX Driver JSON mapping', () => {
   let storage: ReturnType<typeof createStorage>;
   let s3Client: S3Client;
-  let fullBasePrefix: string;
+  // let fullBasePrefix: string;
 
   beforeEach(async () => {
     const region = process.env.AWS_REGION;
@@ -39,7 +41,7 @@ d('[e2e] AWS S3 FLEX Driver JSON mapping', () => {
     });
 
     // Mirror fullBasePrefix joining used by driver
-    fullBasePrefix = joinS3Key(storagePrefix, base);
+    // fullBasePrefix = joinS3Key(storagePrefix, base);
 
     // Clean scope
     await storage.clear('');
