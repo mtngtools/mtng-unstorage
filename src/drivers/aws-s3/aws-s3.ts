@@ -30,7 +30,7 @@ import type { MTBaseDriverRequestOptions, ConditionalDriver } from '../../types.
  * Uses driver-local helpers in `./shared.ts` for S3-specific behavior
  * and general helpers from `../../utils.ts` where applicable.
  */
-export default defineDriver((options: AwsS3DriverOptions) => {
+export default defineDriver((options: AwsS3DriverOptions): ConditionalDriver<typeof options> => {
   const resolvedDriverOptions = validateS3Options({
     ...options,
     name: options.name ?? AWS_S3_DRIVER_NAME,
@@ -44,7 +44,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
 
   // Using shared helpers from driver-local `./shared.ts` and general `utils.ts`
 
-  async function hasItem(key: string, opts: MTBaseDriverRequestOptions): Promise<boolean> {
+  async function hasItem(key: string, opts?: MTBaseDriverRequestOptions): Promise<boolean> {
     // console.debug(`aws-s3 storage hasItem -- KEY: ${key}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
     try {
       await getS3Head(client, {
@@ -142,7 +142,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
   }
 
   // Build return object conditionally based on options
-  const driver = {
+  const driver: ConditionalDriver<typeof resolvedDriverOptions> = {
     name,
     flags: {
       maxDepth: true,
@@ -157,7 +157,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
     ...(!readOnly && allowClear && {
       clear,
     }),
-  } as ConditionalDriver<typeof resolvedDriverOptions>;
+  };
 
   return driver;
 });
