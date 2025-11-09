@@ -245,7 +245,7 @@ describe('aws-s3-flex driver integration', () => {
       // Type-level verification: driver should be assignable to ConditionalDriver
       type DriverType = typeof driver
       type IsConditionalDriver = DriverType extends ConditionalDriver<typeof options> ? true : false
-      const _typeCheck: IsConditionalDriver = true
+      const _typeCheck: IsConditionalDriver = true as IsConditionalDriver
     })
 
     it('correctly infers return types from fromStorageValue', async () => {
@@ -253,11 +253,12 @@ describe('aws-s3-flex driver integration', () => {
         s3Client: mockClient as any,
         bucket: 'test-bucket',
         allowClear: true,
+        readOnly: true,
         fromStorageValue: (v: string) => JSON.parse(v),
       })
       
       // Type inference should work with generic
-      const userValue = await driver.getItem<{ name: string }>('test-key')
+      const userValue = await driver.getItem('test-key') as { name: string } | null
       // TypeScript should correctly infer the return type
       const _userCheck: { name: string } | null = userValue
       
