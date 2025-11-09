@@ -1,10 +1,8 @@
-import type { PutObjectCommandInput } from '@aws-sdk/client-s3';
 import { defineDriver } from 'unstorage';
-import type { AwsS3DriverOptions, S3PutObjectOptions } from './types';
-import { mapUnstorageKeyToS3Key, validateS3Options, createS3Client, mapS3ObjectKeyToUnstorageKey, getS3Body, putS3Object, deleteS3Object, listS3KeysMapped, getS3Head } from './shared.js';
-import { streamToString, clearByListingAndBatching } from '../../utils.js';
+import type { AwsS3DriverOptions  } from './types';
+import { mapUnstorageKeyToS3Key, validateS3Options, createS3Client, mapS3ObjectKeyToUnstorageKey, nativeDriverAWS } from './shared.js';
 import { AWS_S3_DRIVER_NAME } from './types.js';
-import type { MTBaseDriverRequestOptions, ConditionalDriver } from '../../types.js';
+import type {  ConditionalDriver, DriverFactory } from '../../types.js';
 
 /**
  * AWS S3 storage driver for unstorage.
@@ -30,7 +28,7 @@ import type { MTBaseDriverRequestOptions, ConditionalDriver } from '../../types.
  * Uses driver-local helpers in `./shared.ts` for S3-specific behavior
  * and general helpers from `../../utils.ts` where applicable.
  */
-export default defineDriver((options: AwsS3DriverOptions): ConditionalDriver<typeof options> => {
+const awsS3Driver: DriverFactory<AwsS3DriverOptions, never> = defineDriver((options: AwsS3DriverOptions): ConditionalDriver<typeof options> => {
   const resolvedDriverOptions = validateS3Options({
     ...options,
     name: options.name ?? AWS_S3_DRIVER_NAME,
@@ -42,104 +40,31 @@ export default defineDriver((options: AwsS3DriverOptions): ConditionalDriver<typ
   // Build client if not provided using shared helper
   const client = createS3Client(resolvedDriverOptions);
 
-  // Using shared helpers from driver-local `./shared.ts` and general `utils.ts`
+  const mapToS3Key = (key:string) => mapUnstorageKeyToS3Key(key, resolvedDriverOptions);
+  const mapFromS3Key = (key:string) => mapS3ObjectKeyToUnstorageKey(key, resolvedDriverOptions);
 
-  async function hasItem(key: string, opts?: MTBaseDriverRequestOptions): Promise<boolean> {
-    // console.debug(`aws-s3 storage hasItem -- KEY: ${key}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
-    try {
-      await getS3Head(client, {
-        Bucket,
-        Key: mapUnstorageKeyToS3Key(key, resolvedDriverOptions, opts),
-      });
-      return true;
-    } catch {
-      return false;
-    }
-  }
+  const mapValueToS3 = (value: any) => value;
+  const mapValueFromS3 = (value: string) => value;
 
-  /**
-   * Retrieves an item from S3 storage.
-   * 
-   * @template T - The expected return type. Defaults to `unknown`.
-   * @param key - The storage key to retrieve
-   * @param _opts - Optional request options (e.g., maxDepth)
-   * @returns The item value as type T, or null if not found
-   * 
-   * @example
-   * ```typescript
-   * // Type inference
-   * const value = await driver.getItem<string>('my-key');
-   * // value is typed as string | null
-   * 
-   * // With automatic deserialization
-   * const data = await driver.getItem<{ name: string }>('user:123');
-   * // data is typed as { name: string } | null
-   * ```
-   */
-  async function getItem<T = unknown>(key: string, _opts?: MTBaseDriverRequestOptions): Promise<T | null> {
-    // console.debug(`aws-s3 storage getItem -- KEY: ${key}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
-    try {
-      const body = await getS3Body(client, {
-        Bucket,
-        Key: mapUnstorageKeyToS3Key(key, resolvedDriverOptions),
-      });
-      if (!body) return null;
-
-      const content = await streamToString(body);
-      // Return the raw string - the Storage layer will handle deserialization
-      return content as T;
-    } catch  {
-      return null;
-    }
-  }
-
-  async function setItem(
-    key: string,
-    value: string,
-    opts?: MTBaseDriverRequestOptions & { s3Options?: S3PutObjectOptions },
-  ): Promise<void> {
-    // console.debug(`aws-s3 storage setItem -- KEY: ${key}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
-    await putS3Object(
-      client,
+  const {
+    hasItem,
+    getItem,
+    setItem,
+    removeItem,
+    getKeys,
+    clear,
+  } = nativeDriverAWS( 'base',
       {
-        Bucket,
-        Key: mapUnstorageKeyToS3Key(key, resolvedDriverOptions),
-        Body: value,
-        ...opts?.s3Options, // Spread any additional S3 options
-      } as PutObjectCommandInput,
-    );
-  }
-
-  async function removeItem(key: string, _opts?: MTBaseDriverRequestOptions): Promise<void> {
-    // console.debug(`aws-s3 storage removeItem -- KEY: ${key}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
-    await deleteS3Object(client, {
-      Bucket,
-      Key: mapUnstorageKeyToS3Key(key, resolvedDriverOptions),
-    });
-  }
-
-  async function getKeys(basePrefix: string, opts?: MTBaseDriverRequestOptions): Promise<string[]> {
-    // console.debug(`aws-s3 storage getKeys -- basePrefix: ${basePrefix}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
-    return await listS3KeysMapped(
       client,
-      resolvedDriverOptions,
-      (s3Key) => mapS3ObjectKeyToUnstorageKey(s3Key, resolvedDriverOptions, opts),
-      basePrefix,
-      opts,
-    );
-  }
-
-  async function clear(base: string, opts?: MTBaseDriverRequestOptions): Promise<void> {
-    // console.debug(`aws-s3 storage clear -- base: ${base}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
-    await clearByListingAndBatching({
-      opts,
-      baseToClear: base,
-      resolvedDriverOptions,
-      getKeys,
-      removeItem,
-      batchSize: 100,
+      mapToS3Key,
+      mapFromS3Key,
+      mapValueFromS3,
+      mapValueToS3,
+      Bucket,
+      ...resolvedDriverOptions // for {
+      //   fullBasePrefix
+      // }
     });
-  }
 
   // Build return object conditionally based on options
   const driver: ConditionalDriver<typeof resolvedDriverOptions> = {
@@ -161,3 +86,5 @@ export default defineDriver((options: AwsS3DriverOptions): ConditionalDriver<typ
 
   return driver;
 });
+
+export default awsS3Driver;

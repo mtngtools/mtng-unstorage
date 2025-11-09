@@ -3,7 +3,7 @@ import { MockS3Client } from '../../../tests/helpers/mock-s3.js';
 import awsS3FlexDriver from './aws-s3-flex.js';
 import awsS3Driver from './aws-s3.js';
 import { createStorage } from 'unstorage';
-import { joinS3Key, mapUnstorageKeyToS3Key } from './shared.js';
+import { mapUnstorageKeyToS3Key } from './shared.js';
 
 // NOTE: Common driver contract tests for flex are now covered in
 // aws-s3-common.test.ts. This file is intentionally limited to 

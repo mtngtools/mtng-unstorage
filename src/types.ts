@@ -1,3 +1,5 @@
+import { StorageValue, type Driver } from "unstorage";
+
 export type Prettify<T> = {
   [K in keyof T]: T[K];
 } & {};
@@ -77,6 +79,18 @@ export type ResolvedMTBaseDriverOptions = Prettify<MTBaseDriverOptions
   fullBasePrefix: string; //combines base and storagePrefix
 }>;
 
+export type TransformKeyForStorage<
+      TDriverOptions=unknown, 
+      TInput=string,
+      TResult=string | null |undefined,
+      > = (key: TInput, resolvedDriverOptions: ResolvedMTFlexDriverOptions & TDriverOptions, requestOpts?: any) => TResult;
+
+export type TransformValueForStorage<
+      TDriverOptions=unknown,
+      TInput=string,
+      TResult=string,
+      > = (input: TInput, resolvedDriverOptions: ResolvedMTFlexDriverOptions & TDriverOptions, requestOpts?: any) => TResult | Promise<TResult> | null | undefined;
+
 /**
  * Options added to flex drivers that may provide custom key mapping functions.
  *
@@ -85,7 +99,11 @@ export type ResolvedMTBaseDriverOptions = Prettify<MTBaseDriverOptions
  * - If `fromStorageKey` is provided, then either `toStorageKey` must also be provided,
  *   or the driver must be configured as `readOnly: true`.
  */
-export type MTFlexKeyMappingOptions = (
+export type MTFlexKeyMappingOptions<
+      TDriverOptions=unknown,
+      TUnstorageKey=string,
+      TNativeStorageKey=string,    
+      > = (
   | {
       // no mapping functions
       toStorageKey?: never;
@@ -93,13 +111,13 @@ export type MTFlexKeyMappingOptions = (
     }
   | {
       // both mapping functions provided
-      toStorageKey: (key: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => string;
-      fromStorageKey: (key: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => string;
+      fromStorageKey: TransformKeyForStorage<TDriverOptions, TNativeStorageKey, TUnstorageKey>;
+      toStorageKey: TransformKeyForStorage<TDriverOptions, TUnstorageKey, TNativeStorageKey>;
     }
   | {
       // readOnly mode: fromStorageKey required; toStorageKey optional
-      fromStorageKey: (key: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => string;
-      toStorageKey?: (key: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => string;
+      fromStorageKey: TransformKeyForStorage<TDriverOptions, TNativeStorageKey, TUnstorageKey>;
+      toStorageKey?: TransformKeyForStorage<TDriverOptions, TUnstorageKey, TNativeStorageKey>;
       readOnly: true;
     }
 );
@@ -116,30 +134,48 @@ export type MTFlexKeyMappingOptions = (
  * - If `fromStorageValue` is provided, then either `toStorageValue` must also be provided,
  *   or the driver must be configured as `readOnly: true`.
  */
-export type MTFlexValueMappingOptions = (
+export type MTFlexValueMappingOptions<
+      TDriverOptions=MTBaseDriverOptions & unknown,
+      TUnstorageValue extends StorageValue=StorageValue,
+      TNativeStorageValue extends StorageValue=string,
+      > = (
   | {
       toStorageValue?: never;
       fromStorageValue?: never;
     }
   | {
-      toStorageValue: (value: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => string | Promise<string>;
-      fromStorageValue: <TOut = unknown>(value: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => TOut | Promise<TOut>;
+      fromStorageValue: TransformValueForStorage<TDriverOptions, TNativeStorageValue, TUnstorageValue>;
+      toStorageValue: TransformValueForStorage<TDriverOptions, TUnstorageValue, TNativeStorageValue>;
     }
-  | {
-      fromStorageValue: <TOut = unknown>(value: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => TOut | Promise<TOut>;
-      toStorageValue?: (value: string, resolvedDriverOptions: ResolvedMTFlexDriverOptions, requestOpts?: MTBaseDriverRequestOptions) => string | Promise<string>;
+    | {
+      fromStorageValue: TransformValueForStorage<TDriverOptions, TNativeStorageValue, TUnstorageValue>;
+      toStorageValue?: TransformValueForStorage<TDriverOptions, TUnstorageValue, TNativeStorageValue>;
       readOnly: true;
     }
 );
 
-export type MTFlexDriverOptions = MTBaseDriverOptions & MTFlexKeyMappingOptions & MTFlexValueMappingOptions;
+export type MTFlexDriverOptions<
+      TDriverOptions=unknown,
+      TUnstorageValue extends StorageValue=StorageValue,
+      TNativeStorageValue extends StorageValue=string,
+      > = Prettify<MTBaseDriverOptions
+        & MTFlexKeyMappingOptions<TDriverOptions, string, string>
+        & MTFlexValueMappingOptions<TDriverOptions, TUnstorageValue, TNativeStorageValue>
+      >;
 
 /**
  * Resolved options passed to flex mapping functions.
  * Contains canonical driver fields the mapper may need (base and storagePrefix)
  * plus any other validated fields.
  */
-export type ResolvedMTFlexDriverOptions = Prettify<ResolvedMTBaseDriverOptions & MTFlexKeyMappingOptions & MTFlexValueMappingOptions>;
+export type ResolvedMTFlexDriverOptions<
+      TDriverOptions=unknown,
+      TUnstorageValue extends StorageValue=StorageValue,
+      TNativeStorageValue extends StorageValue=string,
+      > = Prettify<ResolvedMTBaseDriverOptions
+          & MTFlexKeyMappingOptions<TDriverOptions, string, string>
+          & MTFlexValueMappingOptions<TDriverOptions, TUnstorageValue, TNativeStorageValue>
+      >;
 
 export type MTBaseDriverRequestOptions = {
   /**
@@ -200,3 +236,15 @@ export type WritableDriver = BaseDriverMethods;
  * Type for a writable driver without clear method.
  */
 export type WritableDriverWithoutClear = Omit<BaseDriverMethods, 'clear'>;
+
+/**
+ * Driver factory type: a function that takes options and returns a Driver instance.
+ * This matches the internal type used by `defineDriver` from unstorage.
+ * Note: unstorage doesn't export this type, so we declare it here.
+ * 
+ * @template OptionsT - The driver options type
+ * @template InstanceT - The driver instance type (typically `never` for stateless drivers)
+ */
+export type DriverFactory<OptionsT = any, InstanceT = never> = (opts: OptionsT) => Driver<OptionsT, InstanceT>;
+
+export type MTDriverType = 'base' | 'flex' | 'versioned';

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { validateKey, serialize, deserialize } from './utils.js';
-import { filterKeyByDepth, streamToString } from './utils.js';
+import { streamToString } from './utils.js';
 
 describe('Utils', () => {
   // removed legacy serialize/deserialize tests
@@ -64,20 +64,6 @@ describe('Utils', () => {
       expect(() => validateKey('path/../other')).toThrow('Key cannot contain ".." path segments')
       expect(() => validateKey('../key')).toThrow('Key cannot contain ".." path segments')
       expect(() => validateKey('key/..')).toThrow('Key cannot contain ".." path segments')
-    })
-  })
-
-  describe('filterKeyByDepth', () => {
-    it('should allow any key when maxDepth is undefined', () => {
-      expect(filterKeyByDepth('a:b:c', undefined)).toBe(true)
-    })
-
-    it('should correctly count depth using ":" separators', () => {
-      expect(filterKeyByDepth('top', 0)).toBe(true)
-      expect(filterKeyByDepth('top:child', 0)).toBe(false)
-      expect(filterKeyByDepth('top:child', 1)).toBe(true)
-      expect(filterKeyByDepth('a:b:c:d', 2)).toBe(false)
-      expect(filterKeyByDepth('a:b:c', 2)).toBe(true)
     })
   })
 
