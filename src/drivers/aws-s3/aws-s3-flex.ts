@@ -1,10 +1,8 @@
-import type { PutObjectCommandInput } from '@aws-sdk/client-s3';
 import { defineDriver } from 'unstorage';
-import type { AwsS3FlexDriverOptions, S3PutObjectOptions } from './types';
-import { mapUnstorageKeyToS3Key, validateS3Options, createS3Client, mapS3ObjectKeyToUnstorageKey, getS3Body, putS3Object, deleteS3Object, listS3KeysMapped, getS3Head } from './shared.js';
-import { clearByListingAndBatching, streamToString } from '../../utils.js';
+import type { AwsS3FlexDriverOptions, ResolvedAwsS3DriverOptions } from './types';
+import { mapUnstorageKeyToS3Key, validateS3Options, createS3Client, mapS3ObjectKeyToUnstorageKey, nativeDriverAWS } from './shared.js';
 import { AWS_S3_FLEX_DRIVER_NAME } from './types.js';
-import type { MTBaseDriverRequestOptions, ConditionalDriver } from '../../types.js';
+import type { DriverFactory } from '../../types.js';
 
 /**
  * AWS S3 Flex storage driver for unstorage with custom key and value mapping.
@@ -37,7 +35,8 @@ import type { MTBaseDriverRequestOptions, ConditionalDriver } from '../../types.
  * Uses driver-local helpers in `./shared.ts` for S3-specific behavior
  * and general helpers from `../../utils.ts` where applicable.
  */
-export default defineDriver((options: AwsS3FlexDriverOptions) => {
+
+const awsS3FlexDriver: DriverFactory<AwsS3FlexDriverOptions, never> = defineDriver((options: AwsS3FlexDriverOptions) => {
   // We'll resolve mappers after validation so defaults can reference the
   // validated options (needed for the built-in toS3StorageKey/fromS3StorageKey).
 
@@ -45,15 +44,15 @@ export default defineDriver((options: AwsS3FlexDriverOptions) => {
     ...options,
     name: options.name ?? AWS_S3_FLEX_DRIVER_NAME,
     storagePrefix: options.storagePrefix ?? options.s3StoragePrefix ?? '',
-  });
+  }) as ResolvedAwsS3DriverOptions;
 
   const { bucket: Bucket, name, readOnly = false, allowClear = false } = resolvedDriverOptions;
 
   // Build client if not provided using shared helper
   const client = createS3Client(resolvedDriverOptions);
 
-  const toStorageKey = options.toStorageKey ?? mapUnstorageKeyToS3Key;
-  const fromStorageKey = options.fromStorageKey ?? mapS3ObjectKeyToUnstorageKey;
+  const toStorageKey = options.toStorageKey ?? ((key, drOpts, _reqOpts) => mapUnstorageKeyToS3Key(key, drOpts));
+  const fromStorageKey = options.fromStorageKey ?? ((key, drOpts, _reqOpts) => mapS3ObjectKeyToUnstorageKey(key, drOpts));
   // Value mapping operates on raw values/strings; defaults are pass-through
   const toStorageValue = options.toStorageValue;
   const fromStorageValue = options.fromStorageValue;
@@ -63,127 +62,48 @@ export default defineDriver((options: AwsS3FlexDriverOptions) => {
     throw new Error('toStorageValue provided without fromStorageValue; provide both or set readOnly: true');
   }
 
-  const mapToS3Key = toStorageKey;
-  const mapFromS3Key = fromStorageKey;
+  const mapToS3Key = (key:string) => toStorageKey(key, resolvedDriverOptions);
+  const mapFromS3Key = (key:string) => fromStorageKey(key, resolvedDriverOptions);
 
-  async function hasItem(key: string, opts: MTBaseDriverRequestOptions): Promise<boolean> {
-    try {
-      await getS3Head(client, {
-        Bucket,
-        Key: mapToS3Key(key, resolvedDriverOptions, opts),
-      });
-      return true;
-    } catch  {
-      return false;
-    }
-  }
+  const mapValueToS3 = (value: any, opts?: unknown) => toStorageValue ? toStorageValue(value, resolvedDriverOptions, opts) : value;
+  const mapValueFromS3 = (value: string, opts?: unknown) => fromStorageValue ? fromStorageValue(value, resolvedDriverOptions, opts) : value;
 
-  /**
-   * Retrieves an item from S3 storage with optional value transformation.
-   * 
-   * If `fromStorageValue` is provided in the driver options, it will be used to
-   * transform the raw string value into the typed value. The generic type parameter
-   * flows through to the mapper function for proper type inference.
-   * 
-   * @template T - The expected return type. Defaults to `unknown`.
-   * @param key - The storage key to retrieve
-   * @param opts - Optional request options (e.g., maxDepth)
-   * @returns The item value as type T (transformed if fromStorageValue is provided), or null if not found
-   * 
-   * @example
-   * ```typescript
-   * // With value mapping - type inferred from fromStorageValue
-   * const driver = awsS3FlexDriver({
-   *   bucket: 'my-bucket',
-   *   fromStorageValue: <T>(v: string) => JSON.parse(v) as T
-   * });
-   * 
-   * const user = await driver.getItem<{ name: string }>('user:123');
-   * // user is typed as { name: string } | null
-   * ```
-   */
-  async function getItem<T = unknown>(key: string, opts?: MTBaseDriverRequestOptions): Promise<T | null> {
-    try {
-      const body = await getS3Body(client, {
-        Bucket,
-        Key: mapToS3Key(key, resolvedDriverOptions, opts),
-      });
-      if (!body) return null;
-      const content = await streamToString(body);
-      // If a fromStorageValue mapper is provided, transform raw string to typed value
-      if (fromStorageValue) {
-        return await fromStorageValue<T>(content, resolvedDriverOptions as any, opts);
-      }
-      return content as T;
-    } catch {
-      return null;
-    }
-  }
-
-  async function setItem(
-    key: string,
-    value: string,
-    opts?: MTBaseDriverRequestOptions & { s3Options?: S3PutObjectOptions },
-  ): Promise<void> {
-    // console.debug(`aws-s3-flex storage setItem -- KEY: ${key}  -- Bucket: ${Bucket}`);
-    const body = toStorageValue ? await toStorageValue(value, resolvedDriverOptions as any, opts) : value;
-    await putS3Object(
-      client,
+  const {
+    hasItem,
+    getItem,
+    setItem,
+    removeItem,
+    getKeys,
+    clear,
+  } = nativeDriverAWS( 'flex',
       {
-        Bucket,
-        Key: mapToS3Key(key, resolvedDriverOptions, opts),
-        Body: body,
-        ...opts?.s3Options,
-      } as PutObjectCommandInput,
-    );
-  }
-
-  async function removeItem(key: string, opts?: MTBaseDriverRequestOptions): Promise<void> {
-    await deleteS3Object(client, {
-      Bucket,
-      Key: mapToS3Key(key, resolvedDriverOptions, opts),
-    });
-  }
-
-  async function getKeys(basePrefix: string, opts: MTBaseDriverRequestOptions): Promise<string[]> {
-    // console.debug(`aws-s3-flex storage getKeys -- basePrefix: ${basePrefix}  -- Bucket: ${Bucket}`);
-    return await listS3KeysMapped(
       client,
-      resolvedDriverOptions,
-      (s3Key) => mapFromS3Key(s3Key, resolvedDriverOptions, opts),
-      basePrefix,
-      opts,
-    );
-  }
-
-  async function clear(base: string, opts: MTBaseDriverRequestOptions): Promise<void> {
-    await clearByListingAndBatching({
-      opts,
-      baseToClear: base,
-      resolvedDriverOptions,
-      getKeys,
-      removeItem,
-      batchSize: 100,
+      mapToS3Key,
+      mapFromS3Key,
+      mapValueToS3,
+      mapValueFromS3,
+      Bucket,
+      ...resolvedDriverOptions // for {
+      //   fullBasePrefix
+      // }
     });
-  }
 
-  // Build return object conditionally based on options
-  const driver = {
+  return {
     name,
     flags: {
       maxDepth: true,
     },
-    hasItem,
-    getItem,
-    getKeys,
+    hasItem: hasItem,
+    getItem: getItem,
+    getKeys: getKeys,
     ...(!readOnly && {
-      setItem,
-      removeItem,
+      setItem: setItem,
+      removeItem: removeItem,
     }),
     ...(!readOnly && allowClear && {
-      clear,
+      clear: clear,
     }),
-  } as ConditionalDriver<typeof resolvedDriverOptions>;
-
-  return driver;
+    } as any;
 });
+
+export default awsS3FlexDriver;

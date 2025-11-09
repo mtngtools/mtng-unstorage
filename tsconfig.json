@@ -24,7 +24,7 @@
     "noImplicitAny": true,
     "noImplicitThis": true,
     "noImplicitOverride": true,
-    "exactOptionalPropertyTypes": true
+    "exactOptionalPropertyTypes": false
   },
   "include": [
     "src/**/*",

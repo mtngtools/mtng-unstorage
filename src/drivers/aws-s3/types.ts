@@ -1,4 +1,5 @@
-import type { MTBaseDriverOptions, AwsRegionAndCredentials, MTFlexDriverOptions, ResolvedMTBaseDriverOptions, Prettify } from '../../types';
+import { StorageValue } from 'unstorage';
+import type { MTBaseDriverOptions, AwsRegionAndCredentials, MTFlexDriverOptions, ResolvedMTBaseDriverOptions, Prettify, } from '../../types';
 import type { S3Client, PutObjectCommandInput } from '@aws-sdk/client-s3';
 
 /**
@@ -40,21 +41,30 @@ type SharedAwsS3DriverOptionsBase = {
 
 export type SharedAwsS3DriverOptions = SharedAwsS3DriverOptionsBase & AwsRegionAndCredentials;
 
+
 /**
  * Flex driver options: MTFlexDriverOptions + S3-specific shared options.
- */
-export type AwsS3FlexDriverOptions = Prettify<MTFlexDriverOptions & SharedAwsS3DriverOptions>;
+*/
+export type AwsS3FlexDriverOptions<
+TDriverOptions=unknown,
+TUnstorageValue extends StorageValue=StorageValue,
+TNativeStorageValue extends StorageValue=StorageValue,
+> = Prettify<SharedAwsS3DriverOptions
+& MTFlexDriverOptions<TDriverOptions, TUnstorageValue, TNativeStorageValue>
+>;
 
 /**
  * Custom type for additional S3 PutObject parameters
  * Excludes Bucket, Key, and Body which are set by the driver
- */
+*/
 export type S3PutObjectOptions = Prettify<Omit<PutObjectCommandInput, 'Bucket' | 'Key' | 'Body'>>
 
 /**
  * Configuration options for the S3 storage driver
- */
+*/
 export type AwsS3DriverOptions = Prettify<MTBaseDriverOptions & SharedAwsS3DriverOptions>;
+
+export type ResolvedAwsS3DriverOptions = Prettify<ResolvedMTBaseDriverOptions & SharedAwsS3DriverOptions>;
 
 export default {} as const;
 
@@ -63,6 +73,7 @@ export default {} as const;
  */
 export const AWS_S3_DRIVER_NAME = 'aws-s3' as const;
 export const AWS_S3_FLEX_DRIVER_NAME = 'aws-s3-flex' as const;
+export const AWS_S3_VERSIONED_DRIVER_NAME = 'aws-s3-versioned' as const;
 
 /**
  * Validated S3 driver options returned by validateS3Options.

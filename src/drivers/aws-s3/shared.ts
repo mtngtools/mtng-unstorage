@@ -1,7 +1,8 @@
-import { validateKey, validateBaseDriverOptions, validateAWSRegionAndCredentials, filterKeyByDepthByOptions } from '../../utils.js';
-import { GetObjectCommandInput, PutObjectCommandInput, DeleteObjectCommandInput, S3Client } from '@aws-sdk/client-s3';
-import type { AwsS3DriverOptions, ResolvedAWSS3DriverOptions } from './types.js';
-import type { MTBaseDriverRequestOptions, ResolvedMTFlexDriverOptions } from '../../types.js';
+import { validateKey, validateBaseDriverOptions, validateAWSRegionAndCredentials, filterKeyByDepthByOptions, streamToString, clearByListingAndBatching } from '../../utils.js';
+import { GetObjectCommandInput, PutObjectCommandInput, DeleteObjectCommandInput, S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command, HeadObjectCommand } from '@aws-sdk/client-s3';
+import type { AwsS3DriverOptions, ResolvedAWSS3DriverOptions, S3PutObjectOptions } from './types.js';
+import type { MTBaseDriverRequestOptions, MTDriverType, ResolvedMTFlexDriverOptions } from '../../types.js';
+import { filterKeyByDepth, StorageValue } from 'unstorage';
 
 /*
  * NOTE: The old backward-compatible aliases (normalizeKey, joinKey, toStorageKey)
@@ -40,6 +41,7 @@ export function joinS3Key(base: string | undefined, key: string): string {
 /**
  * Build the S3 search prefix for ListObjectsV2 by combining storagePrefix, base,
  * and an optional unstorage basePrefix (":" separated) converted to S3 path format.
+ * 
  */
 export function buildS3SearchPrefix (
   resolvedDriverOptions: { fullBasePrefix: string },
@@ -62,12 +64,12 @@ export function buildS3SearchPrefix (
  */
 export function mapUnstorageKeyToS3Key(
   key: string, 
-  resolvededDriverOpts: { fullBasePrefix: string }, 
+  resolvedDriverOptions: {fullBasePrefix: string}, 
   _requestOpts?: MTBaseDriverRequestOptions
 ): string {
   const s3CompatibleKey = key.replace(/:/g, '/');
   validateKey(s3CompatibleKey);
-  return joinS3Key(resolvededDriverOpts.fullBasePrefix, s3CompatibleKey);
+  return joinS3Key(resolvedDriverOptions.fullBasePrefix, s3CompatibleKey);
 }
 
 /**
@@ -85,9 +87,9 @@ export const toS3StorageKey = mapUnstorageKeyToS3Key;
  */
 export const toS3KeyWithJSONExt = (
   key: string,
-  resolvedDriverOpts: { fullBasePrefix: string },
-  _requestOpts?: MTBaseDriverRequestOptions
-): string => `${mapUnstorageKeyToS3Key(key, resolvedDriverOpts, _requestOpts)}.json`;
+  resolvedDriverOptions: ResolvedMTFlexDriverOptions,
+  requestOpts?: MTBaseDriverRequestOptions,
+): string => `${mapUnstorageKeyToS3Key(key, resolvedDriverOptions, requestOpts)}.json`;
 
 /**
  * Map an S3 object key to an unstorage key.
@@ -97,8 +99,8 @@ export const toS3KeyWithJSONExt = (
  */
 export function mapS3ObjectKeyToUnstorageKey(
   key: string, // s3 object key
-  resolvedDriverOptions: ResolvedMTFlexDriverOptions,
-  _requestOpts?: MTBaseDriverRequestOptions,
+  resolvedDriverOptions: ResolvedMTFlexDriverOptions, 
+  _requestOpts?: MTBaseDriverRequestOptions
 ): string {
   if (!key) return '';
   let retKey = key;
@@ -144,7 +146,7 @@ export const fromS3KeyWithJSONExt = (
  */
 export function validateS3Options(
   opts: (AwsS3DriverOptions)
-): ResolvedAWSS3DriverOptions {
+) {
 
   const resolvedBase = validateBaseDriverOptions({ ...opts, storagePrefix: opts.storagePrefix ?? opts.s3StoragePrefix ?? '' });
   const resolvedAWSRegionandCredentials = validateAWSRegionAndCredentials(opts);
@@ -166,13 +168,13 @@ export function validateS3Options(
     ...resolvedBase,
     fullBasePrefix,
     ...resolvedAWSRegionandCredentials,
-  } as ResolvedAWSS3DriverOptions;
+  };
 }
 
 /**
  * Create or return an S3Client from validated options.
  */
-export function createS3Client(opts: ResolvedAWSS3DriverOptions): S3Client {
+export function createS3Client(opts: AwsS3DriverOptions): S3Client {
   if (opts.s3Client) return opts.s3Client as S3Client;
   return new S3Client({
     ...(opts.region ? { region: opts.region } : {}),
@@ -189,6 +191,7 @@ export function createS3Client(opts: ResolvedAWSS3DriverOptions): S3Client {
 /**
  * Fetch an object's Body from S3 using GetObjectCommand.
  * Returns the Body stream/string if present, otherwise null.
+ * @deprecated functionality move to nativeDriverAWS.
  */
 export async function getS3Body(
   client: S3Client,
@@ -203,6 +206,7 @@ export async function getS3Body(
 
 /**
  * Put an object to S3 using PutObjectCommand.
+ * @deprecated functionality move to nativeDriverAWS.
  */
 export async function putS3Object(
   client: S3Client,
@@ -215,6 +219,7 @@ export async function putS3Object(
 
 /**
  * Delete an object from S3 using DeleteObjectCommand.
+ * @deprecated functionality move to nativeDriverAWS.
 */
 export async function deleteS3Object(
   client: S3Client,
@@ -228,6 +233,7 @@ export async function deleteS3Object(
 /**
  * List S3 objects under a prefix and map each object's Key using the provided mapper.
  * Returns an array of mapped keys, skipping any that map to undefined.
+ * @deprecated functionality move to nativeDriverAWS.
  */
 export async function listS3KeysMapped(
   client: S3Client,
@@ -280,3 +286,152 @@ export async function getS3Head(client:S3Client, params: { Bucket: string; Key: 
 
   await client.send(command);
 }
+
+
+export const nativeDriverAWS = <O extends unknown>(
+  driverType: MTDriverType,
+  resolvedDriverOptions: {
+    client: S3Client, 
+    Bucket: string,
+    fullBasePrefix: string,
+    maxDepth?: number,
+    mapToS3Key: (key:string) => string,
+    mapFromS3Key: (key:string) => string,
+    mapValueToS3: (value: any) => string,
+    mapValueFromS3: (value: string) => any
+  }) => {
+
+    const { 
+      client, 
+      Bucket, 
+      fullBasePrefix,
+      mapToS3Key,
+      mapFromS3Key,
+      mapValueToS3,
+      mapValueFromS3
+    } = resolvedDriverOptions;
+
+    const hasItem = async (key:string, _opts?: O) => {
+    
+      try {
+        const command = new HeadObjectCommand({
+            Bucket,
+            Key: mapToS3Key(key),
+          }
+        );
+    
+        await client.send(command);    
+        return true;
+      } catch {
+        return false;
+      }
+
+    };
+
+    const getItem = async <T extends StorageValue = StorageValue>(key: string, _opts?: T) => {
+      // console.debug(`aws-s3 storage getItem -- KEY: ${key}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
+      try {
+        const body = await getS3Body(client, {
+          Bucket,
+          Key: mapToS3Key(key),
+        });
+        if (!body) return null;
+        const content = await streamToString(body);
+        return await mapValueFromS3(content) as T;
+      } catch  {
+        return null;
+      }
+    }
+
+    const setItem = async (key: string, value: any, _opts?: unknown & { s3Options?: S3PutObjectOptions }) => {
+        // console.debug(`Putting S3 object   -- KEY: ${params.Key}    -- Bucket: ${params.Bucket}`);
+
+        const optionsToAdd = (_opts && (_opts as any).s3Options) ? { ...(_opts as any).s3Options } : {};
+
+        await client.send(new PutObjectCommand({
+          Bucket,
+          Key: mapToS3Key(key),
+          Body: mapValueToS3(value),
+          ContentType: 'application/json',
+          ...optionsToAdd,
+        }));
+    };
+
+    const setItemVersioned = async (key: string, value: any, _opts?: unknown & { s3Options?: S3PutObjectOptions }) => {
+        // console.debug(`Putting S3 object   -- KEY: ${params.Key}    -- Bucket: ${params.Bucket}`);
+
+        const optionsToAdd = (_opts && (_opts as any).s3Options) ? { ...(_opts as any).s3Options } : {};
+
+        await client.send(new PutObjectCommand({
+          Bucket,
+          Key: mapToS3Key(key),
+          Body: value,
+          ContentType: 'application/json',
+          ...optionsToAdd,
+        }));
+    };
+
+    const removeItem = async (key: string, _opts?: O) => {
+        await client.send(new DeleteObjectCommand({
+          Bucket,
+          Key: mapToS3Key(key),
+        }));
+    };
+  
+    const getKeys = async (base?: string, _opts?: O & { maxDepth?:number}) => {
+
+      const keys: string[] = [];
+      let continuationToken: string | undefined;
+      const maxDepth = _opts?.maxDepth ?? resolvedDriverOptions.maxDepth ?? undefined;
+      // console.debug(`Listing S3 objects -- maxDepth ${opts?.maxDepth ?? resolvedDriverOptions.maxDepth ?? undefined}  -- basePrefix: ${basePrefix} -- fullBasePrefix: ${resolvedDriverOptions.fullBasePrefix} -- Bucket: ${resolvedDriverOptions.bucket}`);
+
+      do {
+        const response = await client.send(new ListObjectsV2Command({
+          Bucket,
+          Prefix: buildS3SearchPrefix({ fullBasePrefix }, base),
+          MaxKeys: 1000,
+          ContinuationToken: continuationToken
+        }));
+        if (response.Contents) {
+          for (const object of response.Contents) {
+            if (!object.Key) continue;
+            
+            const mapped = mapFromS3Key(object.Key);
+            // console.debug(`Mapped S3 object  -- MAPPED: ${mapped} -- KEY: ${object.Key}`);
+            if (mapped) {
+              // This can be optimized later
+              // console.debug(`In filter depth: ${filterKeyByDepthByOptions(mapped, resolvedDriverOptions, opts)} -- MAPPED: ${mapped}  `);
+              if (filterKeyByDepth(mapped, maxDepth)) {
+                keys.push(mapped);
+              }
+            }
+            // console.debug(`Keys from Listing S3 objects  -- KEYS: ${keys} `);
+          
+          }
+        }
+        continuationToken = response.NextContinuationToken;
+      } while (continuationToken);
+
+      return keys;
+    };
+
+    const clear = async (base: string, opts?: any): Promise<void> => {
+      const args = {
+        opts,
+        baseToClear: base,
+        getKeys,
+        removeItem,
+      };
+      await clearByListingAndBatching(args);
+    };
+
+
+    return {
+      hasItem,
+      getItem,
+      setItem : (driverType === 'versioned') ? setItemVersioned : setItem,
+      removeItem,
+      getKeys,
+      clear: clear
+    };
+  };

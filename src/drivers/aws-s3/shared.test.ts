@@ -9,10 +9,6 @@ import {
   mapS3ObjectKeyToUnstorageKey,
   validateS3Options,
   createS3Client,
-  getS3Body,
-  putS3Object,
-  deleteS3Object,
-  listS3KeysMapped,
   getS3Head,
   toS3KeyWithJSONExt,
   fromS3KeyWithJSONExt,
@@ -29,26 +25,14 @@ const { mockS3ClientObj, mockS3ClientCtor } = vi.hoisted(() => {
 
 const {
   mockHeadObjectCommand,
-  mockGetObjectCommand,
-  mockPutObjectCommand,
-  mockDeleteObjectCommand,
-  mockListObjectsV2Command,
 } = vi.hoisted(() => ({
   mockHeadObjectCommand: vi.fn(),
-  mockGetObjectCommand: vi.fn(),
-  mockPutObjectCommand: vi.fn(),
-  mockDeleteObjectCommand: vi.fn(),
-  mockListObjectsV2Command: vi.fn(),
 }))
 
 vi.mock('@aws-sdk/client-s3', async () => {
   return {
     S3Client: mockS3ClientCtor,
     HeadObjectCommand: mockHeadObjectCommand,
-    GetObjectCommand: mockGetObjectCommand,
-    PutObjectCommand: mockPutObjectCommand,
-    DeleteObjectCommand: mockDeleteObjectCommand,
-    ListObjectsV2Command: mockListObjectsV2Command,
   }
 })
 
@@ -176,70 +160,11 @@ describe('shared S3 helpers', () => {
     })
   })
 
-  describe('S3 command helpers', () => {
-
-    it('getS3Body returns Body or null', async () => {
-      // non-null Body
-      ;(mockS3ClientObj.send as any) = vi.fn().mockResolvedValue({ Body: 'DATA' })
-      const body = await getS3Body(mockS3ClientObj, { Bucket: 'b', Key: 'k' } as any)
-      expect(body).toBe('DATA')
-      // null Body
-      ;(mockS3ClientObj.send as any) = vi.fn().mockResolvedValue({ Body: null })
-      const bodyNull = await getS3Body(mockS3ClientObj, { Bucket: 'b', Key: 'k' } as any)
-      expect(bodyNull).toBeNull()
-    })
-
-    it('putS3Object calls PutObjectCommand', async () => {
-      ;(mockS3ClientObj.send as any) = vi.fn().mockResolvedValue({})
-      await putS3Object(mockS3ClientObj, { Bucket: 'b', Key: 'k', Body: 'v' } as any)
-      expect(mockPutObjectCommand).toHaveBeenCalledWith({ Bucket: 'b', Key: 'k', Body: 'v' })
-    })
-
-    it('deleteS3Object calls DeleteObjectCommand', async () => {
-      ;(mockS3ClientObj.send as any) = vi.fn().mockResolvedValue({})
-      await deleteS3Object(mockS3ClientObj, { Bucket: 'b', Key: 'k' } as any)
-      expect(mockDeleteObjectCommand).toHaveBeenCalledWith({ Bucket: 'b', Key: 'k' })
-    })
-
-    it('getS3Head sends HeadObjectCommand (existence check)', async () => {
+  describe('getS3Head', () => {
+    it('sends HeadObjectCommand (existence check)', async () => {
       ;(mockS3ClientObj.send as any) = vi.fn().mockResolvedValue({})
       await getS3Head(mockS3ClientObj as any, { Bucket: 'b', Key: 'k' })
       expect(mockHeadObjectCommand).toHaveBeenCalledWith({ Bucket: 'b', Key: 'k' })
-    })
-  })
-
-  describe('listS3KeysMapped', () => {
-    it('lists and maps keys with pagination and basePrefix handling', async () => {
-      const resolved = makeResolved({ storagePrefix: 'root', base: 'app' })
-      ;(mockS3ClientObj.send as any) = vi.fn()
-        .mockResolvedValueOnce({
-          Contents: [ { Key: 'root/app/a' }, { Key: 'root/app/x/y' } ],
-          NextContinuationToken: 'T1'
-        })
-        .mockResolvedValueOnce({
-          Contents: [ { Key: 'root/app/b' } ]
-        })
-
-      const result = await listS3KeysMapped(
-        mockS3ClientObj,
-        resolved,
-        mapS3ObjectKeyToUnstorageKey,
-        'x', // basePrefix
-      )
-
-      // Only keys under basePrefix 'x' should map when Prefix uses it
-      // First page had 'root/app/a' and 'root/app/x/y' => maps ['', 'x:y'] then depth filter none
-      // Second page had 'root/app/b'
-      // After mapping all non-undefined, expect results contain ['', 'x:y', 'b'] but because Prefix 'root/app/x' should filter server-side, we assert calls
-      expect(result).toEqual(['a', 'x:y', 'b'].filter(Boolean))
-
-      // Verify ListObjectsV2Command called with computed Prefix
-      expect(mockListObjectsV2Command).toHaveBeenCalledWith({
-        Bucket: resolved.bucket,
-        Prefix: 'root/app/x',
-        MaxKeys: 1000,
-        ContinuationToken: undefined,
-      })
     })
   })
 })

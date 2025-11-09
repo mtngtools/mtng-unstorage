@@ -3,7 +3,7 @@
  */
 
 import { destr } from 'destr';
-import type { AwsRegionAndCredentials, MTBaseDriverOptions, MTBaseDriverRequestOptions, ResolvedMTBaseDriverOptions, ResolvedMTFlexDriverOptions } from './types';
+import type { AwsRegionAndCredentials, MTBaseDriverOptions, MTBaseDriverRequestOptions, ResolvedMTBaseDriverOptions } from './types';
 
 
 /**
@@ -39,6 +39,7 @@ export function validateKey(key: string): void {
 
 /**
  * Filters a key by maxDepth, counting ':' separators
+ * @deprecated use unstorage version
  */
 export function filterKeyByDepth(key: string, maxDepth: number | undefined): boolean {
   if (maxDepth === undefined) {
@@ -55,7 +56,7 @@ export function filterKeyByDepth(key: string, maxDepth: number | undefined): boo
   */
 export const filterKeyByDepthByOptions = (
   key: string,
-  resolvedDriverOptions: ResolvedMTFlexDriverOptions,
+  resolvedDriverOptions: MTBaseDriverOptions,
   requestOpts?: MTBaseDriverRequestOptions,
   ) => filterKeyByDepth(key, requestOpts?.maxDepth ?? resolvedDriverOptions.maxDepth ?? undefined);
 
@@ -121,11 +122,12 @@ export async function streamToString(stream: any): Promise<string> {
 /**
  * Clear helper that lists keys and removes them in batches.
  * Callers provide driver-specific getKeys and removeItem functions.
+ * TODO add batchSize as driver and request option
  */
 export async function clearByListingAndBatching(args: {
   opts: any;
   baseToClear: string;
-  resolvedDriverOptions: ResolvedMTBaseDriverOptions;
+  resolvedDriverOptions?: ResolvedMTBaseDriverOptions;
   getKeys: (base: string, opts: any) => Promise<string[]>;
   removeItem: (key: string, opts: any) => Promise<void>;
   batchSize?: number;
@@ -139,3 +141,5 @@ export async function clearByListingAndBatching(args: {
     await Promise.all(batch.map((key: string) => removeItem(key, opts)));
   }
 }
+
+export default {} as const;
