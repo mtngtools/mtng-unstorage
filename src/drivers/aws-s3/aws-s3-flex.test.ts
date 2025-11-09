@@ -3,7 +3,7 @@ import { MockS3Client } from '../../../tests/helpers/mock-s3.js';
 import awsS3FlexDriver from './aws-s3-flex.js';
 import awsS3Driver from './aws-s3.js';
 import { createStorage } from 'unstorage';
-import { joinS3Key } from './shared.js';
+import { joinS3Key, mapUnstorageKeyToS3Key } from './shared.js';
 
 // NOTE: Common driver contract tests for flex are now covered in
 // aws-s3-common.test.ts. This file is intentionally limited to 
@@ -16,10 +16,12 @@ describe('aws-s3-flex flex only scenarios', () => {
 
     // Custom mapping: collapse everything between the first and last segment
     // into a single literal 'replaced'
-    const toStorageKey = (key: string, _opts: any) => {
+    const toStorageKey = (key: string, opts: any) => {
       const parts = key.split(':')
-      if (parts.length <= 2) return key
-      return `${parts[0]}:replaced:${parts[parts.length - 1]}`
+      if (parts.length <= 2) return mapUnstorageKeyToS3Key(key, opts)
+      const mappedKey = `${parts[0]}:replaced:${parts[parts.length - 1]}`
+      // Convert colons to slashes to match base driver behavior
+      return mapUnstorageKeyToS3Key(mappedKey, opts)
     }
 
     const fromStorageKey = (s3Key: string, _opts: any) => {
@@ -81,9 +83,10 @@ describe('aws-s3-flex flex only scenarios', () => {
 
     const toStorageKey = (key: string, opts: any) => {
       const parts = key.split(':')
-      if (parts.length <= 2) return key
+      if (parts.length <= 2) return mapUnstorageKeyToS3Key(key, opts)
       const mappedKey = `${parts[0]}:replaced:${parts[parts.length - 1]}`;
-      return joinS3Key(opts.fullBasePrefix, mappedKey);
+      // Convert colons to slashes to match base driver behavior
+      return mapUnstorageKeyToS3Key(mappedKey, opts)
     }
 
     const fromStorageKey = (s3Key: string, _opts: any) => {
