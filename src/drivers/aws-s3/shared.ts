@@ -2,7 +2,7 @@ import { validateKey, validateBaseDriverOptions, validateAWSRegionAndCredentials
 import { GetObjectCommandInput, PutObjectCommandInput, DeleteObjectCommandInput, S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command, HeadObjectCommand } from '@aws-sdk/client-s3';
 import type { AwsS3DriverOptions, ResolvedAWSS3DriverOptions, S3PutObjectOptions } from './types.js';
 import type { MTBaseDriverRequestOptions, MTDriverType, ResolvedMTFlexDriverOptions } from '../../types.js';
-import { filterKeyByDepth, StorageValue } from 'unstorage';
+import { filterKeyByDepth } from 'unstorage';
 
 /*
  * NOTE: The old backward-compatible aliases (normalizeKey, joinKey, toStorageKey)
@@ -288,7 +288,7 @@ export async function getS3Head(client:S3Client, params: { Bucket: string; Key: 
 }
 
 
-export const nativeDriverAWS = <O extends unknown>(
+export const nativeDriverAWS = (
   driverType: MTDriverType,
   resolvedDriverOptions: {
     client: S3Client, 
@@ -311,7 +311,7 @@ export const nativeDriverAWS = <O extends unknown>(
       mapValueFromS3
     } = resolvedDriverOptions;
 
-    const hasItem = async (key:string, _opts?: O) => {
+    const hasItem = async (key:string, _opts?: MTBaseDriverRequestOptions) => {
     
       try {
         const command = new HeadObjectCommand({
@@ -328,7 +328,7 @@ export const nativeDriverAWS = <O extends unknown>(
 
     };
 
-    const getItem = async <T extends StorageValue = StorageValue>(key: string, _opts?: T) => {
+    const getItem = async <T = unknown>(key: string, _opts?: MTBaseDriverRequestOptions) => {
       // console.debug(`aws-s3 storage getItem -- KEY: ${key}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
       try {
         const body = await getS3Body(client, {
@@ -343,10 +343,10 @@ export const nativeDriverAWS = <O extends unknown>(
       }
     }
 
-    const setItem = async (key: string, value: any, _opts?: unknown & { s3Options?: S3PutObjectOptions }) => {
+    const setItem = async (key: string, value: string, _opts?: MTBaseDriverRequestOptions & { s3Options?: S3PutObjectOptions }) => {
         // console.debug(`Putting S3 object   -- KEY: ${params.Key}    -- Bucket: ${params.Bucket}`);
 
-        const optionsToAdd = (_opts && (_opts as any).s3Options) ? { ...(_opts as any).s3Options } : {};
+        const optionsToAdd = (_opts && _opts.s3Options) ? { ..._opts.s3Options } : {};
 
         await client.send(new PutObjectCommand({
           Bucket,
@@ -357,10 +357,10 @@ export const nativeDriverAWS = <O extends unknown>(
         }));
     };
 
-    const setItemVersioned = async (key: string, value: any, _opts?: unknown & { s3Options?: S3PutObjectOptions }) => {
+    const setItemVersioned = async (key: string, value: string, _opts?: MTBaseDriverRequestOptions & { s3Options?: S3PutObjectOptions }) => {
         // console.debug(`Putting S3 object   -- KEY: ${params.Key}    -- Bucket: ${params.Bucket}`);
 
-        const optionsToAdd = (_opts && (_opts as any).s3Options) ? { ...(_opts as any).s3Options } : {};
+        const optionsToAdd = (_opts && _opts.s3Options) ? { ..._opts.s3Options } : {};
 
         await client.send(new PutObjectCommand({
           Bucket,
@@ -371,14 +371,14 @@ export const nativeDriverAWS = <O extends unknown>(
         }));
     };
 
-    const removeItem = async (key: string, _opts?: O) => {
+    const removeItem = async (key: string, _opts?: MTBaseDriverRequestOptions) => {
         await client.send(new DeleteObjectCommand({
           Bucket,
           Key: mapToS3Key(key),
         }));
     };
   
-    const getKeys = async (base?: string, _opts?: O & { maxDepth?:number}) => {
+    const getKeys = async (base?: string, _opts?: MTBaseDriverRequestOptions) => {
 
       const keys: string[] = [];
       let continuationToken: string | undefined;
