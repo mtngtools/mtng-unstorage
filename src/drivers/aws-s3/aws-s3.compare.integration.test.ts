@@ -82,16 +82,25 @@ describe('aws-s3 driver comparison via storage.mount()', () => {
       expect(await storage.getItem('sessions:active:abc123')).toEqual(sessionData)
       
       // Verify key listing across mounts
-  const userKeys = await storage.getKeys('users')
-  const sessionKeys = await storage.getKeys('sessions')
+      const userKeys = await storage.getKeys('users')
+      const sessionKeys = await storage.getKeys('sessions')
       
       expect(userKeys).toEqual(['users:profile:123'])
       expect(sessionKeys).toEqual(['sessions:active:abc123'])
       
       // Verify underlying key transformation
-  // Base driver preserves ':' in underlying keys
-  expect(mockClient1.storage.has('app-users/profile:123')).toBe(true)
-  expect(mockClient2.storage.has('app-sessions/session-active:abc123.json')).toBe(true)
+      // Base driver converts ':' to '/' in underlying keys
+      // When key is 'users:profile:123', mount 'users' strips to 'profile:123', which becomes 'profile/123'
+      // With storagePrefix 'app-users/' and no base, fullBasePrefix is 'app-users/'
+      // Final S3 key is 'app-users/profile/123'
+      // Flex driver uses custom toStorageKey that preserves ':' in the key part
+      // When key is 'sessions:active:abc123', mount 'sessions' strips to 'active:abc123'
+      // Custom mapping does: session-${key}.json = session-active:abc123.json
+      // With storagePrefix 'app-sessions/', final key is 'app-sessions/session-active:abc123.json'
+      const allUserKeys = Array.from(mockClient1.storage.keys())
+      const allSessionKeys = Array.from(mockClient2.storage.keys())
+      expect(allUserKeys).toContain('app-users/profile/123')
+      expect(allSessionKeys).toContain('app-sessions/session-active:abc123.json')
     })
 
     it('supports cross-mount operations', async () => {

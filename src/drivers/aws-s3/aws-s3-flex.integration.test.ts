@@ -50,7 +50,10 @@ describe('aws-s3-flex driver integration', () => {
       await storage.setItem('sessions:user:123:profile', complexData)
       
       // Verify the custom key transformation
-      expect(mockClient.storage.has('session-user:123:profile.json')).toBe(true)
+      // Custom mapping converts 'sessions:' prefix to 'session-' and appends '.json'
+      // With our fix, colons in the key are converted to slashes
+      // So 'sessions:user:123:profile' -> 'session-user/123/profile.json'
+      expect(mockClient.storage.has('session-user/123/profile.json')).toBe(true)
       expect(await storage.getItem('sessions:user:123:profile')).toEqual(complexData)
     })
 
