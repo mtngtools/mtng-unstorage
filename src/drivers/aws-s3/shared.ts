@@ -65,8 +65,9 @@ export function mapUnstorageKeyToS3Key(
   resolvededDriverOpts: { fullBasePrefix: string }, 
   _requestOpts?: MTBaseDriverRequestOptions
 ): string {
-  validateKey(key.replace(/:/g, '/'));
-  return joinS3Key(resolvededDriverOpts.fullBasePrefix, key);
+  const s3CompatibleKey = key.replace(/:/g, '/');
+  validateKey(s3CompatibleKey);
+  return joinS3Key(resolvededDriverOpts.fullBasePrefix, s3CompatibleKey);
 }
 
 /**
