@@ -177,7 +177,6 @@ describe('shared S3 helpers', () => {
   })
 
   describe('S3 command helpers', () => {
-    const resolved = makeResolved({ storagePrefix: 'root', base: 'app' })
 
     it('getS3Body returns Body or null', async () => {
       // non-null Body

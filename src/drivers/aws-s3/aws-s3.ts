@@ -52,7 +52,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
         Key: mapUnstorageKeyToS3Key(key, resolvedDriverOptions, opts),
       });
       return true;
-    } catch (error: any) {
+    } catch {
       return false;
     }
   }
@@ -88,7 +88,7 @@ export default defineDriver((options: AwsS3DriverOptions) => {
       const content = await streamToString(body);
       // Return the raw string - the Storage layer will handle deserialization
       return content as T;
-    } catch (error: any) {
+    } catch  {
       return null;
     }
   }
