@@ -103,7 +103,7 @@ const awsS3FlexDriver: DriverFactory<AwsS3FlexDriverOptions, never> = defineDriv
     ...(!readOnly && allowClear && {
       clear: clear,
     }),
-    } as any;
+    };
 });
 
 export default awsS3FlexDriver;
