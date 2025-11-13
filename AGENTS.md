@@ -1,37 +1,25 @@
 # AGENTS.md
 
-Package-specific agent guidance — mtng-unstorage
-----------------------------------------------
+## Package-specific agent guidance for `@mtngtools/mtng-unstorage`
 
-This file contains only repository/package-specific guidance for automated agents working on the `mtng-unstorage` package. For organization-wide conventions, tooling policies, and network usage rules, see `AGENTS_ORGANIZATION.md`.
+This file contains only package-specific guidance for automated agents working on the `@mtngtools/mtng-unstorage` package. See below for additional guidance.
 
-Repository-specific notes
--------------------------
+## Organization-specific guidance 
 
-- `AGENTS_REPO.md` documents repository-level agent guidance.
+Follow organization-level rules in `AGENTS_ORGANIZATION.md` found in [`https://github.com/mtngtools/agents`](https://github.com/mtngtools/agents) repository. If this repository has not been provided in context, agent must either 1) pull directly from GitHub or 2) prompt user to provide to context. 
 
 Technology-stack-specific notes
--------------------------------
 
-This is Typescript package, consult `AGENTS_TYPESCRIPT.md`.
+This is Typescript package, consult [`stacks/AGENTS_STACK_TYPESCRIPT/README.md`](stacks/AGENTS_STACK_TYPESCRIPT/README.md) found in `mtngtools/agents` repository.
 
-Package-specific notes
-----------------------
+## Repository-specific guidance
 
-- E2E tests are in `tests-e2e/` and are gated by an environment variable. Do NOT run or publish E2E results unless `AWS_S3_E2E_ENABLED=true` and credentials are provided.
-- Drivers and S3 helpers live under `src/drivers/aws-s3/`. Exercise caution when changing exported helper names — update `CHANGELOG.md` and include migration notes in the PR when making breaking changes.
-- Cross-driver utilities are in `src/utils.ts` and are used by drivers in this package.
+- Find `AGENTS_REPO.md` in the root of this project's repository for repository-level agent guidance.
 
-Files of interest (package)
----------------------------
+## Package starting places
 
-- `src/drivers/aws-s3/` — S3 driver implementations and helpers
-- `src/utils.ts` — shared helpers
-- `tests-e2e/` — integration/E2E tests (gated)
-- `CHANGELOG.md` — canonical release notes for this package
-- `package.json` — package metadata, exports, and version
-
+Consult [`README.md`](./README.md) and [`package.json`](./package.json) as best starting places. 
 
 ----
 
-Keep this file short and focused — add only repo/package-specific rules here.
+Keep this file short and focused — add only package-specific rules here.
