@@ -1,0 +1,76 @@
+{
+	"version": "2.0.0",
+	"nvm": {
+		"version": "20.19.0",
+		"use": true
+	},
+	"tasks": [
+		{
+            "type": "shell",
+            "command": "pnpm build",
+			"group": "build",
+			"problemMatcher": [],
+			"label": "pnpm: build",
+			"detail": "vite build"
+		},
+		{
+            "type": "shell",
+            "command": "pnpm test:watch",
+			"group": "build",
+			"problemMatcher": [],
+			"label": "pnpm: test:watch",
+			"detail": "vitest --watch"
+		},
+		{
+            "type": "shell",
+            "command": "pnpm prepublishOnly",
+			"problemMatcher": [],
+			"label": "pnpm: prepublishOnly",
+			"detail": "pnpm run typecheck && pnpm run lint && pnpm run build && pnpm run test",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}			
+		},
+		{
+            "type": "shell",
+            "command": "pnpm lint",
+			"problemMatcher": [],
+			"label": "pnpm: lint",
+			"detail": "oxlint src"
+		},
+		{
+            "type": "shell",
+            "command": "pnpm test:ui",
+			"problemMatcher": [],
+			"label": "pnpm: test:ui",
+			"detail": "vitest --ui",
+			"group": {
+				"kind": "test",
+				"isDefault": true
+			}
+		},
+		{
+            "type": "shell",
+            "command": "pnpm test:e2e",
+			"problemMatcher": [],
+			"label": "pnpm: test:e2e",
+			"detail": "VITEST_POOL_THREADS=false NODE_ENV=test vitest run tests-e2e --config vitest.e2e.config.ts"
+		},
+		{
+            "type": "shell",
+            "command": "pnpm test:e2e:ui",
+			"problemMatcher": [],
+			"label": "pnpm: test:e2e:ui",
+			"detail": "vitest tests-e2e --ui --config vitest.e2e.config.ts"
+		},
+		{
+            "type": "shell",
+            "command": "pnpm install",
+			"group": "none",
+			"problemMatcher": [],
+			"label": "pnpm: install",
+			"detail": "install dependencies from package"
+		}
+	]
+}
