@@ -70,7 +70,7 @@
     "@aws-sdk/client-s3": "^3.927.0",
     "@types/node": "^20.19.24",
     "@vitest/coverage-v8": "^4.0.8",
-    "@vitest/ui": "4.0.8",
+    "@vitest/ui": "4.0.9",
     "oxlint": "^1.26.0",
     "vite-plugin-oxlint": "^1.4.0",
     "typescript": "^5.9.3",
