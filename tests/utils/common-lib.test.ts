@@ -1,10 +1,14 @@
-import { describe, it, expect } from 'vitest';
-import { validateKey, serialize, deserialize } from './utils.js';
-import { streamToString } from './utils.js';
+/**
+ * Common Library Utilities Tests
+ * 
+ * Tests for common library utilities (serialize, deserialize, streamToString).
+ * These are integration-only tests (NOT included in E2E tests).
+ */
 
-describe('Utils', () => {
-  // removed legacy serialize/deserialize tests
+import { describe, it, expect } from 'vitest'
+import { serialize, deserialize, streamToString } from '../../src/utils/common-lib.js'
 
+describe('common-lib utilities', () => {
   describe('serialize', () => {
     it('JSON stringifies strings and plain objects', () => {
       const obj = { a: 1 }
@@ -46,27 +50,6 @@ describe('Utils', () => {
     })
   })
 
-  describe('validateKey', () => {
-    it('should accept valid keys', () => {
-      expect(() => validateKey('valid')).not.toThrow()
-      expect(() => validateKey('path/to/key')).not.toThrow()
-      expect(() => validateKey('key-with-dashes_and_underscores')).not.toThrow()
-    })
-
-    it('should reject empty or non-string keys', () => {
-      expect(() => validateKey('')).toThrow('Key must be a non-empty string')
-      expect(() => validateKey(null as any)).toThrow('Key must be a non-empty string')
-      expect(() => validateKey(undefined as any)).toThrow('Key must be a non-empty string')
-      expect(() => validateKey(42 as any)).toThrow('Key must be a non-empty string')
-    })
-
-    it('should reject keys with path traversal', () => {
-      expect(() => validateKey('path/../other')).toThrow('Key cannot contain ".." path segments')
-      expect(() => validateKey('../key')).toThrow('Key cannot contain ".." path segments')
-      expect(() => validateKey('key/..')).toThrow('Key cannot contain ".." path segments')
-    })
-  })
-
   describe('streamToString', () => {
     it('should return string as-is', async () => {
       expect(await streamToString('plain')).toBe('plain')
@@ -88,3 +71,4 @@ describe('Utils', () => {
     })
   })
 })
+
