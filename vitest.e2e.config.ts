@@ -1,4 +1,5 @@
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vitest/config';
+import { loadEnv } from 'vite';
 
 // Load environment variables for e2e test mode
 // Load both .env.test.e2e and .env.test.e2e.local
@@ -10,7 +11,7 @@ const env = {
 // Vitest config for E2E tests - no AWS SDK mocking
 export default defineConfig({
   test: {
-    include: ['tests-e2e/**/*.e2e.test.ts', 'tests/e2e/**/*.e2e.test.ts'],
+    include: ['tests/e2e/**/*.test.ts'],
     globals: true,
     environment: 'node',
     setupFiles: ['./vitest.setup.e2e.ts'],
@@ -20,7 +21,8 @@ export default defineConfig({
     env: {
       ...process.env,
       ...env,
-      NODE_ENV: 'test'
+      NODE_ENV: 'test',
+      VITEST_MODE: 'e2e'
     }
   }
 });

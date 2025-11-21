@@ -1,11 +1,20 @@
+/**
+ * AWS S3 Driver Comparison Tests
+ * 
+ * Tests comparing base and flex drivers when mounted together.
+ * These tests verify mount isolation, cross-mount operations, and driver parity.
+ * 
+ * NOTE: This file is integration-only (NOT included in E2E tests)
+ */
+
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createStorage } from 'unstorage'
-import awsS3Driver from './aws-s3.js'
-import awsS3FlexDriver from './aws-s3-flex.js'
-import { mapS3ObjectKeyToUnstorageKey, mapUnstorageKeyToS3Key, joinS3Key } from './shared.js'
-import { MockS3Client } from '../../../tests/helpers/mock-s3.js'
-import type { AwsS3DriverOptions, AwsS3FlexDriverOptions } from './types.js'
-import type { ConditionalDriver } from '../../types.js'
+import awsS3Driver from '../../../src/drivers/aws-s3/aws-s3.js'
+import awsS3FlexDriver from '../../../src/drivers/aws-s3/aws-s3-flex.js'
+import { mapS3ObjectKeyToUnstorageKey, mapUnstorageKeyToS3Key, joinS3Key } from '../../../src/drivers/aws-s3/shared.js'
+import { MockS3Client } from '../../helpers/mock-s3.js'
+import type { AwsS3DriverOptions, AwsS3FlexDriverOptions } from '../../../src/drivers/aws-s3/types.js'
+import type { ConditionalDriver } from '../../../src/types.js'
 
 describe('aws-s3 driver comparison via storage.mount()', () => {
   let mockClient1: MockS3Client
@@ -66,7 +75,7 @@ describe('aws-s3 driver comparison via storage.mount()', () => {
       
       // Verify different underlying storage patterns
       expect(mockClient1.storage.get('app-users/test')).toBe(JSON.stringify(testData))
-  expect(mockClient2.storage.get('app-sessions/session-test.json')).toBe(JSON.stringify(testData))
+      expect(mockClient2.storage.get('app-sessions/session-test.json')).toBe(JSON.stringify(testData))
     })
 
     it('handles different key structures across mounts', async () => {
@@ -109,9 +118,9 @@ describe('aws-s3 driver comparison via storage.mount()', () => {
       await storage.setItem('sessions:shared', { data: 'session-data' })
       
       // Get all keys across all mounts
-  const allKeys = await storage.getKeys()
-  // Order not guaranteed across mounts; ensure both present
-  expect(allKeys).toEqual(expect.arrayContaining(['users:shared', 'sessions:shared']))
+      const allKeys = await storage.getKeys()
+      // Order not guaranteed across mounts; ensure both present
+      expect(allKeys).toEqual(expect.arrayContaining(['users:shared', 'sessions:shared']))
       
       // Clear individual mounts
       await storage.clear('users')
@@ -239,12 +248,12 @@ describe('aws-s3 driver comparison via storage.mount()', () => {
 
       expect(flexKeysStripped).toEqual(baseKeysStripped)
 
-        // Cleanup via base mount
-        for (const k of baseKeysStripped) {
-          await storage.removeItem(`base:${k}`)
-        }
-      })
+      // Cleanup via base mount
+      for (const k of baseKeysStripped) {
+        await storage.removeItem(`base:${k}`)
+      }
     })
+  })
 
   describe('TypeScript type checking across multiple mounts', () => {
     it('correctly types drivers when mounted together', () => {
@@ -275,7 +284,10 @@ describe('aws-s3 driver comparison via storage.mount()', () => {
       type FlexDriverType = typeof flexDriver
       type BaseIsConditional = BaseDriverType extends ConditionalDriver<typeof baseOptions> ? true : false
       type FlexIsConditional = FlexDriverType extends ConditionalDriver<typeof flexOptions> ? true : false
+      // Type checking only - values are intentionally unused
+      // @ts-expect-error - intentionally unused for type checking
       const _baseTypeCheck: BaseIsConditional = true
+      // @ts-expect-error - intentionally unused for type checking
       const _flexTypeCheck: FlexIsConditional = true
 
       // Mount both
@@ -285,5 +297,5 @@ describe('aws-s3 driver comparison via storage.mount()', () => {
       expect(testStorage).toBeDefined()
     })
   })
-
 })
+
