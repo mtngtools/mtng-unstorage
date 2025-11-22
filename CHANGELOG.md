@@ -26,9 +26,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - S3 drivers now accept optional `s3Client`; when omitted, the driver constructs an internal `S3Client` using the AWS SDK default provider chain.
 - Support for optional inline AWS configuration when constructing an internal client: `region`, `accessKeyId`, `secretAccessKey`, and `sessionToken`.
+- New subpath exports for better tree-shaking and API organization:
+  - `@mtngtools/unstorage/types` - All common types
+  - `@mtngtools/unstorage/utils` - All utilities
+  - `@mtngtools/unstorage/drivers/aws-s3` - S3 base driver, flex driver, types, and helpers
+- **Dual import strategy support**: The package now supports both convenience imports (from root) and granular imports (from subpaths). All exports are available from the main entry point for convenience, while subpath imports provide better tree-shaking for production builds.
 
 ### Changed
 - Relax validation: `s3Client` is no longer required. Bucket name is still required. If any inline credential is provided, both `accessKeyId` and `secretAccessKey` must be set.
+- **Main entry point**: Now exports everything (drivers, types, utilities, helpers) for convenience, while maintaining subpath exports for granular imports and optimal tree-shaking.
+
+### Breaking Changes
+- **Subpath imports recommended for production**: While driver-specific exports are still available from the main entry point, using subpath imports is recommended for production builds to optimize bundle size:
+  ```typescript
+  // Convenience import (from root) - everything available
+  import { awsS3Driver, AwsS3DriverOptions, validateKey } from '@mtngtools/unstorage';
+  
+  // Granular import (from subpaths) - better tree-shaking, recommended for production
+  import { awsS3Driver, awsS3FlexDriver, AwsS3DriverOptions, toS3StorageKey } from '@mtngtools/unstorage/drivers/aws-s3';
+  import { validateKey } from '@mtngtools/unstorage/utils';
+  import type { MTBaseDriverOptions } from '@mtngtools/unstorage/types';
+  ```
 
 ## [0.2.0] - 2025-11-01
 
