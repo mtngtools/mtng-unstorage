@@ -26,8 +26,9 @@ A TypeScript library providing storage drivers for [unstorage](https://github.co
 - **TypeScript First**: Built with TypeScript for better developer experience
 - **Additional Features**: Read-only mode, default clear protection, maxDepth filtering
 - **Tested**: Unit and E2E tests
-- **Tree Shakeable**: ESM and CJS builds with proper tree shaking
+- **Tree Shakeable**: ESM and CJS builds with proper tree shaking, supports both convenience and granular imports
 - **Type Safe**: Full TypeScript support with detailed type definitions
+- **Flexible Imports**: Support both convenience imports (from root) and granular imports (from subpaths) for optimal tree-shaking
 
 ## Quick Start
 
@@ -37,6 +38,24 @@ A TypeScript library providing storage drivers for [unstorage](https://github.co
 pnpm install @mtngtools/unstorage
 ```
 
+### Import Strategies
+
+The package supports two import strategies:
+
+**1. Convenience imports (from root)** - Everything available in one import:
+```typescript
+import { awsS3Driver, AwsS3DriverOptions, validateKey } from '@mtngtools/unstorage'
+```
+
+**2. Granular imports (from subpaths)** - Better tree-shaking, recommended for production:
+```typescript
+import { awsS3Driver } from '@mtngtools/unstorage/drivers/aws-s3'
+import { validateKey } from '@mtngtools/unstorage/utils'
+import type { MTBaseDriverOptions } from '@mtngtools/unstorage/types'
+```
+
+Both strategies work identically. Use subpath imports for production builds to optimize bundle size.
+
 ### AWS S3 Driver
 
 ```bash
@@ -44,10 +63,30 @@ pnpm install @mtngtools/unstorage
 pnpm install @aws-sdk/client-s3 unstorage
 ```
 
+**Convenience import (from root):**
 ```typescript
 import { createStorage } from 'unstorage'
 import { S3Client } from '@aws-sdk/client-s3'
 import { awsS3Driver } from '@mtngtools/unstorage'
+
+// Create storage instance
+const storage = createStorage({
+  driver: awsS3Driver({
+    bucket: 'my-storage-bucket'
+  })
+})
+
+// Use the storage
+await storage.setItem('user:123', { name: 'John', email: 'john@example.com' })
+const user = await storage.getItem('user:123')
+console.log(user) // { name: 'John', email: 'john@example.com' }
+```
+
+**Granular import (from subpath - recommended for production):**
+```typescript
+import { createStorage } from 'unstorage'
+import { S3Client } from '@aws-sdk/client-s3'
+import { awsS3Driver } from '@mtngtools/unstorage/drivers/aws-s3'
 
 // Create storage instance
 const storage = createStorage({
@@ -72,10 +111,14 @@ Notes about recent driver changes:
 
 The flex variant lets you adapt keys and values to existing S3 layouts without forking the driver.
 
-Import the flex driver via subpath export:
-
+**Convenience import (from root):**
 ```ts
-import awsS3FlexDriver from '@mtngtools/unstorage/aws-s3-flex'
+import { awsS3FlexDriver } from '@mtngtools/unstorage'
+```
+
+**Granular import (from subpath - recommended for production):**
+```ts
+import { awsS3FlexDriver } from '@mtngtools/unstorage/drivers/aws-s3'
 ```
 
 Key mapping hooks allow you to translate between unstorage keys (':' separated) and S3 keys:

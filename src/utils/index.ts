@@ -1,8 +1,7 @@
 /**
- * Utils index
+ * Utilities index
  * 
- * Re-exports all utilities to maintain API compatibility.
- * All existing imports from './utils.js' will continue to work.
+ * Re-exports all utilities for the ./utils subpath export.
  */
 
 // Common storage utilities
@@ -21,12 +20,7 @@ export {
   streamToString
 } from './common-lib.js';
 
-// Provider-specific utilities
+// AWS provider utilities
 export {
   validateAWSRegionAndCredentials
 } from './provider-aws.js';
-
-// Variant utilities (future - currently empty)
-export * from './variant-flex.js';
-export * from './variant-versioned.js';
-

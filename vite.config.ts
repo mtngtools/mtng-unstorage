@@ -17,7 +17,9 @@ export default defineConfig({
     lib: {
       entry: {
         index: 'src/index.ts',
-        'drivers/aws-s3/aws-s3': 'src/drivers/aws-s3/aws-s3.ts'
+        types: 'src/types/index.ts',
+        utils: 'src/utils/index.ts',
+        'drivers/aws-s3/index': 'src/drivers/aws-s3/index.ts'
       },
       name: 'MtngUnstorage',
       formats: ['es', 'cjs']

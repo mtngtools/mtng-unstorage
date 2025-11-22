@@ -1,10 +1,41 @@
 # API Reference
 
-## Exported Types
+## Package Exports
+
+The package supports two import strategies:
+
+1. **Convenience imports** (from main entry) - Everything available in one import
+2. **Granular imports** (from subpaths) - Better tree-shaking, recommended for production
+
+### Import Strategies
+
+**Convenience import (from root):**
+```typescript
+import { 
+  awsS3Driver,
+  awsS3FlexDriver,
+  AwsS3DriverOptions,
+  validateKey,
+  type MTBaseDriverOptions
+} from '@mtngtools/unstorage'
+```
+
+**Granular import (from subpaths - recommended for production):**
+```typescript
+import { awsS3Driver } from '@mtngtools/unstorage/drivers/aws-s3'
+import { validateKey } from '@mtngtools/unstorage/utils'
+import type { MTBaseDriverOptions } from '@mtngtools/unstorage/types'
+```
+
+Both strategies work identically. Use subpath imports for production builds to optimize bundle size.
+
+## Main Entry Point
+
+The main entry (`@mtngtools/unstorage`) exports everything for convenience:
 
 ```typescript
 // Common types
-export type { 
+import type { 
   MTBaseDriverOptions,
   MTBaseDriverRequestOptions,
   ConditionalDriver,
@@ -12,26 +43,73 @@ export type {
   WritableDriver,
   WritableDriverWithoutClear,
   BaseDriverMethods
-} from './types.js'
-
-// AWS S3 Drivers
-// Root export exposes the base S3 driver
-export { default as awsS3Driver } from './drivers/aws-s3/aws-s3.js'
-export type { AwsS3DriverOptions, S3PutObjectOptions } from './drivers/aws-s3/aws-s3.js'
-// Subpath export exposes the flex S3 driver with custom mapping hooks
-// import awsS3FlexDriver from '@mtngtools/unstorage/aws-s3-flex'
+} from '@mtngtools/unstorage'
 
 // Utilities
-export { validateKey } from './utils.js'
+import { validateKey } from '@mtngtools/unstorage'
+
+// Drivers
+import { awsS3Driver, awsS3FlexDriver } from '@mtngtools/unstorage'
+
+// Driver-specific types
+import type { AwsS3DriverOptions, S3PutObjectOptions } from '@mtngtools/unstorage'
+
+// Driver helpers
+import { toS3StorageKey, normalizeS3Key, joinS3Key } from '@mtngtools/unstorage'
 ```
+
+## Subpath Exports
+
+Subpath exports provide granular imports for better tree-shaking. All exports are also available from the main entry for convenience.
+
+### Types Subpath
+
+```typescript
+// Import all common types
+import type { 
+  MTBaseDriverOptions,
+  ConditionalDriver,
+  // ... all common types
+} from '@mtngtools/unstorage/types'
+```
+
+### Utils Subpath
+
+```typescript
+// Import utilities
+import { 
+  validateKey,
+  serialize,
+  deserialize,
+  streamToString
+} from '@mtngtools/unstorage/utils'
+```
+
+### AWS S3 Driver Subpath
+
+```typescript
+// Import S3 driver, types, and helpers
+import { 
+  awsS3Driver,
+  awsS3FlexDriver,
+  type AwsS3DriverOptions,
+  type S3PutObjectOptions,
+  mapUnstorageKeyToS3Key,
+  mapS3ObjectKeyToUnstorageKey,
+  toS3StorageKey, // deprecated
+  // ... all S3 helpers
+} from '@mtngtools/unstorage/drivers/aws-s3'
+```
+
+**Note:** All of these exports are also available from the main entry (`@mtngtools/unstorage`) for convenience, but using subpaths provides better tree-shaking in production builds.
 
 ## Utilities
 
 ```typescript
 import { 
   validateKey,
-} from '@mtng/unstorage'
-import awsS3FlexDriver from '@mtngtools/unstorage/aws-s3-flex'
+} from '@mtngtools/unstorage/utils'
+import { awsS3FlexDriver } from '@mtngtools/unstorage/drivers/aws-s3'
 
 // Validate keys
 validateKey('valid-key')     // OK
@@ -136,7 +214,8 @@ The package exports several utility types for working with conditional drivers:
 Infers the available methods based on driver options:
 
 ```typescript
-import type { ConditionalDriver, AwsS3DriverOptions } from '@mtngtools/unstorage';
+import type { ConditionalDriver } from '@mtngtools/unstorage/types';
+import type { AwsS3DriverOptions } from '@mtngtools/unstorage/drivers/aws-s3';
 
 // Read-only driver type
 type ReadOnlyS3Driver = ConditionalDriver<{ readOnly: true }>;
