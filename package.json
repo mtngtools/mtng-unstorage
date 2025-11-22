@@ -12,15 +12,20 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./aws-s3": {
-      "types": "./dist/drivers/aws-s3/aws-s3.d.ts",
-      "import": "./dist/drivers/aws-s3/aws-s3.js",
-      "require": "./dist/drivers/aws-s3/aws-s3.cjs"
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js",
+      "require": "./dist/types/index.cjs"
     },
-    "./aws-s3-flex": {
-      "types": "./dist/drivers/aws-s3/aws-s3-flex.d.ts",
-      "import": "./dist/drivers/aws-s3/aws-s3-flex.js",
-      "require": "./dist/drivers/aws-s3/aws-s3-flex.cjs"
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "import": "./dist/utils/index.js",
+      "require": "./dist/utils/index.cjs"
+    },
+    "./drivers/aws-s3": {
+      "types": "./dist/drivers/aws-s3/index.d.ts",
+      "import": "./dist/drivers/aws-s3/index.js",
+      "require": "./dist/drivers/aws-s3/index.cjs"
     }
   },
   "files": [
