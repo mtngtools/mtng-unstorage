@@ -1,6 +1,7 @@
 import { defineDriver } from 'unstorage';
 import type { AwsS3FlexDriverOptions, ResolvedAwsS3DriverOptions } from './types';
-import { mapUnstorageKeyToS3Key, validateS3Options, createS3Client, mapS3ObjectKeyToUnstorageKey, nativeDriverAWS } from './shared.js';
+import { mapUnstorageKeyToS3Key, validateS3Options, createS3Client, mapS3ObjectKeyToUnstorageKey } from './shared-public.js';
+import { nativeDriverAWS } from './shared-native.js';
 import { AWS_S3_FLEX_DRIVER_NAME } from './types.js';
 import type { DriverFactory } from '../../types.js';
 

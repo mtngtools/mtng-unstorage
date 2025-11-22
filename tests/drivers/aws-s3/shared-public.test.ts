@@ -1,7 +1,7 @@
 /**
- * AWS S3 Shared Utilities Tests
+ * AWS S3 Public Utilities Tests
  * 
- * Tests for S3-specific shared utilities (normalizeS3Key, joinS3Key, mapping functions, etc.).
+ * Tests for public S3 utilities useful for custom mapping implementations.
  * These are integration-only tests (NOT included in E2E tests).
  */
 
@@ -11,31 +11,28 @@ import {
   joinS3Key,
   buildS3SearchPrefix,
   mapUnstorageKeyToS3Key,
-  toS3StorageKey,
   mapS3ObjectKeyToUnstorageKey,
   validateS3Options,
   createS3Client,
-  getS3Head,
   toS3KeyWithJSONExt,
   fromS3KeyWithJSONExt,
-} from '../../../src/drivers/aws-s3/shared.js'
+} from '../../../src/drivers/aws-s3/shared-public.js'
 
 // Import MockS3Client which sets up the AWS SDK mock
 import { MockS3Client } from '../../helpers/mock-s3.js'
 
 // Track S3Client constructor calls for createS3Client tests
-const { mockS3ClientCtor, mockHeadObjectCommand } = vi.hoisted(() => {
-  const mockHeadCmd = vi.fn()
+const { mockS3ClientCtor } = vi.hoisted(() => {
   let constructorCallCount = 0
   let lastConstructorArgs: any[] = []
-  
+
   // Create a mock constructor that tracks calls
   const mockCtor = vi.fn(function (this: any, ...args: any[]) {
     constructorCallCount++
     lastConstructorArgs = args
     return new MockS3Client()
   })
-  
+
   // Add tracking methods
   ;(mockCtor as any).getCallCount = () => constructorCallCount
   ;(mockCtor as any).getLastArgs = () => lastConstructorArgs
@@ -43,10 +40,9 @@ const { mockS3ClientCtor, mockHeadObjectCommand } = vi.hoisted(() => {
     constructorCallCount = 0
     lastConstructorArgs = []
   }
-  
+
   return {
     mockS3ClientCtor: mockCtor,
-    mockHeadObjectCommand: mockHeadCmd,
   }
 })
 
@@ -56,13 +52,6 @@ vi.mock('@aws-sdk/client-s3', async () => {
   return {
     ...actual,
     S3Client: mockS3ClientCtor,
-    HeadObjectCommand: class HeadObjectCommand { 
-      input: any
-      constructor(input: any) { 
-        this.input = input
-        mockHeadObjectCommand(input)
-      }
-    },
   }
 })
 
@@ -71,7 +60,7 @@ function makeResolved(overrides: Record<string, any> = {}) {
   return validateS3Options(opts as any)
 }
 
-describe('shared S3 helpers', () => {
+describe('shared-public S3 utilities', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -103,16 +92,12 @@ describe('shared S3 helpers', () => {
     })
   })
 
-  describe('mapUnstorageKeyToS3Key and alias', () => {
+  describe('mapUnstorageKeyToS3Key', () => {
     const resolved = makeResolved({ storagePrefix: 'root', base: 'app' })
 
     it('maps and normalizes unstorage key to S3 key', () => {
       expect(mapUnstorageKeyToS3Key('user//data', resolved)).toBe('root/app/user/data')
       expect(mapUnstorageKeyToS3Key('/user/', resolved)).toBe('root/app/user')
-    })
-
-    it('alias toS3StorageKey behaves the same', () => {
-      expect(toS3StorageKey('k', resolved)).toBe(mapUnstorageKeyToS3Key('k', resolved))
     })
 
     it('validates key', () => {
@@ -128,7 +113,6 @@ describe('shared S3 helpers', () => {
       expect(mapS3ObjectKeyToUnstorageKey('root/app/dir/file', resolved)).toBe('dir:file')
       expect(mapS3ObjectKeyToUnstorageKey('root/app', resolved)).toBe('')
     })
-
   })
 
   describe('JSON extension mapping helpers', () => {
@@ -198,19 +182,6 @@ describe('shared S3 helpers', () => {
           credentials: { accessKeyId: 'AKIA', secretAccessKey: 'SECRET', sessionToken: 'TOKEN' }
         })
       }
-    })
-  })
-
-  describe('getS3Head', () => {
-    it('sends HeadObjectCommand (existence check)', async () => {
-      const mockClient = new MockS3Client()
-      // Add the key to storage so HeadObjectCommand doesn't throw
-      mockClient.storage.set('k', 'value')
-      await getS3Head(mockClient as any, { Bucket: 'b', Key: 'k' })
-      // Verify the command was sent (MockS3Client handles HeadObjectCommand via the send method)
-      // The mockHeadObjectCommand tracks constructor calls, but getS3Head uses dynamic import
-      // So we verify the command was processed by checking the client was called
-      expect(mockClient.storage.has('k')).toBe(true)
     })
   })
 })

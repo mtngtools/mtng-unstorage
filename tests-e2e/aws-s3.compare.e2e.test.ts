@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createStorage } from 'unstorage'
 import awsS3Driver from '../src/drivers/aws-s3/aws-s3'
 import awsS3FlexDriver from '../src/drivers/aws-s3/aws-s3-flex'
-import { mapUnstorageKeyToS3Key, mapS3ObjectKeyToUnstorageKey } from '../src/drivers/aws-s3/shared'
+import { mapUnstorageKeyToS3Key, mapS3ObjectKeyToUnstorageKey } from '../src/drivers/aws-s3/shared-public'
 import { S3Client } from '@aws-sdk/client-s3'
 
 describe('AWS S3 FLEX Compare E2E', () => {

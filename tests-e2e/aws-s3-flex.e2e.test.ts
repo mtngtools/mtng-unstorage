@@ -7,8 +7,8 @@ import { createStorage } from 'unstorage';
 import awsS3FlexDriver from '../src/drivers/aws-s3/aws-s3-flex';
 import { S3Client } from '@aws-sdk/client-s3';
 // import { HeadObjectCommand } from '@aws-sdk/client-s3';
-// import { joinS3Key } from '../src/drivers/aws-s3/shared';
-import { toS3KeyWithJSONExt, fromS3KeyWithJSONExt } from '../src/drivers/aws-s3/shared';
+// import { joinS3Key } from '../src/drivers/aws-s3/shared-public';
+import { toS3KeyWithJSONExt, fromS3KeyWithJSONExt } from '../src/drivers/aws-s3/shared-public';
 
 const isE2EEnabled = process.env.AWS_S3_E2E_ENABLED === 'true';
 const d = isE2EEnabled ? describe : describe.skip;

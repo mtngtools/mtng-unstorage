@@ -14,7 +14,10 @@ import '../drivers/aws-s3/aws-s3-flex-types.test.js'
 // Import comparison tests (integration only, not E2E)
 import '../drivers/aws-s3/aws-s3-compare.test.js'
 // Import shared utilities tests (integration only, not E2E)
-import '../drivers/aws-s3/shared.test.js'
+import '../drivers/aws-s3/shared-public.test.js'
+import '../drivers/aws-s3/shared-deprecated.test.js'
+import '../drivers/aws-s3/shared-internal.test.js'
+import '../drivers/aws-s3/shared-native.test.js'
 // Import utils tests (integration only, not E2E)
 import '../utils/common-lib.test.js'
 import '../utils/common-storage.test.js'
