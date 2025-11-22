@@ -10,7 +10,7 @@ import { createStorage } from 'unstorage'
 import { flexMtTests } from '../../variants/flex/flex-mt-tests.js'
 import awsS3FlexDriver from '../../../src/drivers/aws-s3/aws-s3-flex.js'
 import { MockS3Client } from '../../helpers/mock-s3.js'
-import { mapS3ObjectKeyToUnstorageKey, toS3KeyWithJSONExt } from '../../../src/drivers/aws-s3/shared.js'
+import { mapS3ObjectKeyToUnstorageKey, toS3KeyWithJSONExt } from '../../../src/drivers/aws-s3/shared-public.js'
 import type { AwsS3FlexDriverOptions } from '../../../src/drivers/aws-s3/types.js'
 
 describe('aws-s3 flex (mt tests)', () => {
