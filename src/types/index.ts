@@ -21,6 +21,7 @@ export type {
   MTBaseDriverOptions,
   ResolvedMTBaseDriverOptions,
   MTBaseDriverRequestOptions,
+  MTBaseDriverTransactionOptions,
   BaseDriverMethods,
   ConditionalDriver,
   ReadOnlyDriver,
