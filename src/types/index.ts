@@ -20,7 +20,6 @@ export type {
 export type {
   MTBaseDriverOptions,
   ResolvedMTBaseDriverOptions,
-  MTBaseDriverRequestOptions,
   MTBaseDriverTransactionOptions,
   BaseDriverMethods,
   ConditionalDriver,
@@ -33,8 +32,6 @@ export type {
 
 // Flex variant driver types
 export type {
-  TransformKeyForStorage,
-  TransformValueForStorage,
   MTFlexKeyMappingOptions,
   MTFlexValueMappingOptions,
   MTFlexDriverOptions,

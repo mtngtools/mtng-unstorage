@@ -27,13 +27,11 @@
     "exactOptionalPropertyTypes": false
   },
   "include": [
-    "src/**/*",
-    "tests/**/*"
+    "src/**/*"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "**/*.test.ts",
-    "**/*.test-d.ts"
+    "tests"
   ]
 }

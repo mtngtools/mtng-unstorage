@@ -56,10 +56,16 @@ describe('aws-s3 flex (mt tests)', () => {
           s3Client: mockClient as any,
           bucket: 'test-bucket',
           allowClear: true,
-          toStorageKey: (key, driverOpts, opts) => toS3KeyWithJSONExt(`session-${key}`, driverOpts, opts),
-          fromStorageKey: (s3Key, driverOpts, opts) => mapS3ObjectKeyToUnstorageKey(s3Key, driverOpts, opts)
-            .replace(/^session-/, '')
-            .replace(/\.json$/, ''),
+          toStorageKey: (params) => {
+            const { key, ...rest } = params;
+            return toS3KeyWithJSONExt({ ...rest, key: `session-${key}` });
+          },
+          fromStorageKey: (params) => {
+            const { key: s3Key, ...rest } = params;
+            return mapS3ObjectKeyToUnstorageKey({ ...rest, key: s3Key })
+              .replace(/^session-/, '')
+              .replace(/\.json$/, '');
+          },
         }))
       })
 
@@ -130,12 +136,13 @@ describe('aws-s3 flex (mt tests)', () => {
           // then return a JSON string for persistence. On read, we reverse it
           // and return a JSON string of the original shape so unstorage can
           // deserialize it back to a JS object.
-          toStorageValue: (value) => {
-            const original = JSON.parse(String(value))
+          toStorageValue: (params) => {
+            const original = JSON.parse(String(params.input))
             const mapped = { _type: 'mapped', payload: original }
             return JSON.stringify(mapped)
           },
-          fromStorageValue: ((s3Value: string) => {
+          fromStorageValue: ((params) => {
+            const s3Value = params.input as string;
             const mapped = JSON.parse(s3Value)
             return JSON.stringify(mapped.payload)
           }) as any,

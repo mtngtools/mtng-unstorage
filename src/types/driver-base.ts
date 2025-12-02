@@ -57,18 +57,15 @@ export type ResolvedMTBaseDriverOptions = Prettify<MTBaseDriverOptions
   fullBasePrefix: string; //combines base and storagePrefix
 }>;
 
-export type MTBaseDriverRequestOptions = {
+/**
+ * Transaction options for driver operations.
+ */
+export type MTBaseDriverTransactionOptions = {
   /**
    * Maximum depth of keys (number of ':' separators). Undefined means no limit.
    */
   maxDepth?: number
 }
-
-/**
- * Transaction options for driver operations.
- * This is the new name for transaction options, aliased to MTBaseDriverRequestOptions for backward compatibility.
- */
-export type MTBaseDriverTransactionOptions = MTBaseDriverRequestOptions;
 
 /**
  * Base driver interface with all possible methods.
@@ -77,12 +74,12 @@ export type MTBaseDriverTransactionOptions = MTBaseDriverRequestOptions;
 export type BaseDriverMethods = {
   name: string;
   flags: { maxDepth: boolean };
-  hasItem: (key: string, opts?: MTBaseDriverRequestOptions) => Promise<boolean>;
-  getItem: <T = unknown>(key: string, opts?: MTBaseDriverRequestOptions) => Promise<T | null>;
-  getKeys: (basePrefix: string, opts?: MTBaseDriverRequestOptions) => Promise<string[]>;
-  setItem?: (key: string, value: string, opts?: MTBaseDriverRequestOptions) => Promise<void>;
-  removeItem?: (key: string, opts?: MTBaseDriverRequestOptions) => Promise<void>;
-  clear?: (base: string, opts?: MTBaseDriverRequestOptions) => Promise<void>;
+  hasItem: (key: string, opts?: MTBaseDriverTransactionOptions) => Promise<boolean>;
+  getItem: <T = unknown>(key: string, opts?: MTBaseDriverTransactionOptions) => Promise<T | null>;
+  getKeys: (basePrefix: string, opts?: MTBaseDriverTransactionOptions) => Promise<string[]>;
+  setItem?: (key: string, value: string, opts?: MTBaseDriverTransactionOptions) => Promise<void>;
+  removeItem?: (key: string, opts?: MTBaseDriverTransactionOptions) => Promise<void>;
+  clear?: (base: string, opts?: MTBaseDriverTransactionOptions) => Promise<void>;
 };
 
 /**
@@ -129,4 +126,6 @@ export type WritableDriverWithoutClear = Omit<BaseDriverMethods, 'clear'>;
 export type DriverFactory<OptionsT = any, InstanceT = never> = (opts: OptionsT) => Driver<OptionsT, InstanceT>;
 
 export type MTDriverType = 'base' | 'flex' | 'versioned';
+
+export type StorageKey = string | object;
 

@@ -39,11 +39,8 @@ export function baseMtTestsTypes(opts: BaseVariantTypeTestOptions) {
 
         // These should be false (methods don't exist)
         // Type checking only - values are intentionally unused
-        // @ts-expect-error - intentionally unused for type checking
         const _setItemCheck: HasSetItem = false
-        // @ts-expect-error - intentionally unused for type checking
         const _removeItemCheck: HasRemoveItem = false
-        // @ts-expect-error - intentionally unused for type checking
         const _clearCheck: HasClear = false
 
         // These assignments should compile (verify types are correct)
@@ -73,7 +70,6 @@ export function baseMtTestsTypes(opts: BaseVariantTypeTestOptions) {
         type NoClearDriverType = typeof noClearDriver
         type HasClear = NoClearDriverType extends { clear: any } ? true : false
         // Type checking only - value is intentionally unused
-        // @ts-expect-error - intentionally unused for type checking
         const _clearCheck: HasClear = false
 
         expect(hasSetItem2).toBeDefined()
@@ -88,7 +84,6 @@ export function baseMtTestsTypes(opts: BaseVariantTypeTestOptions) {
 
         // Verify type is correct (compile-time check)
         // Type checking only - value is intentionally unused for type verification
-        // @ts-expect-error - intentionally unused for type checking
         const _typeCheck: typeof value = value
 
         expect(value).toBeNull()

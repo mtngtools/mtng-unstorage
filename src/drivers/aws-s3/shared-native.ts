@@ -6,24 +6,28 @@
  */
 
 import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command, HeadObjectCommand } from '@aws-sdk/client-s3';
-import type { MTBaseDriverRequestOptions, MTDriverType } from '../../types.js';
+import type { MTBaseDriverTransactionOptions, MTDriverType } from '../../types.js';
 import type { S3PutObjectOptions } from './types.js';
 import { streamToString, clearByListingAndBatching } from '../../utils.js';
-import { filterKeyByDepth } from 'unstorage';
+import { filterKeyByDepth, StorageValue } from 'unstorage';
 import { getS3Body } from './shared-deprecated.js';
 import { buildS3SearchPrefix } from './shared-public.js';
 
-export const nativeDriverAWS = (
+export const nativeDriverAWS = <
+TUnstorageVal extends StorageValue = StorageValue,
+TAddlTransOpts extends unknown=unknown,
+TCombinedTransOpts extends MTBaseDriverTransactionOptions= TAddlTransOpts & MTBaseDriverTransactionOptions,
+> (
   driverType: MTDriverType,
   resolvedDriverOptions: {
     client: S3Client;
     Bucket: string;
     fullBasePrefix: string;
     maxDepth?: number;
-    mapToS3Key: (key: string, opts?: MTBaseDriverRequestOptions) => string;
-    mapFromS3Key: (key: string, opts?: MTBaseDriverRequestOptions) => string;
-    mapValueToS3: (value: any, opts?: MTBaseDriverRequestOptions) => string;
-    mapValueFromS3: (value: string, opts?: MTBaseDriverRequestOptions) => any;
+    mapToS3Key: (key: string, transactionOptions?: TCombinedTransOpts) => string;
+    mapFromS3Key: (key: string, transactionOptions?: TCombinedTransOpts) => string;
+    mapValueToS3: (value: any, transactionOptions?: TCombinedTransOpts) => any;
+    mapValueFromS3: (value: any, transactionOptions?: TCombinedTransOpts) => any;
   }) => {
 
   const {
@@ -36,7 +40,7 @@ export const nativeDriverAWS = (
     mapValueFromS3
   } = resolvedDriverOptions;
 
-  const hasItem = async (key: string, _opts?: MTBaseDriverRequestOptions) => {
+  const hasItem = async (key: string, _opts?: TCombinedTransOpts) => {
     try {
       const command = new HeadObjectCommand({
         Bucket,
@@ -50,7 +54,7 @@ export const nativeDriverAWS = (
     }
   };
 
-  const getItem = async <T = unknown>(key: string, _opts?: MTBaseDriverRequestOptions) => {
+  const getItem = async <T = unknown>(key: string, _opts?: TCombinedTransOpts) => {
     // console.debug(`aws-s3 storage getItem -- KEY: ${key}  -- Bucket: ${Bucket}  -- fullBasePrefix: ${fullBasePrefix}`);
     try {
       const body = await getS3Body(client, {
@@ -65,7 +69,7 @@ export const nativeDriverAWS = (
     }
   };
 
-  const setItem = async (key: string, value: string, _opts?: MTBaseDriverRequestOptions & { s3Options?: S3PutObjectOptions }) => {
+  const setItem = async (key: string, value: TUnstorageVal, _opts?: TCombinedTransOpts & { s3Options?: S3PutObjectOptions }) => {
     // console.debug(`Putting S3 object   -- KEY: ${params.Key}    -- Bucket: ${params.Bucket}`);
 
     const optionsToAdd = (_opts && _opts.s3Options) ? { ..._opts.s3Options } : {};
@@ -79,7 +83,7 @@ export const nativeDriverAWS = (
     }));
   };
 
-  const setItemVersioned = async (key: string, value: string, _opts?: MTBaseDriverRequestOptions & { s3Options?: S3PutObjectOptions }) => {
+  const setItemVersioned = async (key: string, value: TUnstorageVal, _opts?: TCombinedTransOpts & { s3Options?: S3PutObjectOptions }) => {
     // console.debug(`Putting S3 object   -- KEY: ${params.Key}    -- Bucket: ${params.Bucket}`);
 
     const optionsToAdd = (_opts && _opts.s3Options) ? { ..._opts.s3Options } : {};
@@ -87,20 +91,20 @@ export const nativeDriverAWS = (
     await client.send(new PutObjectCommand({
       Bucket,
       Key: mapToS3Key(key, _opts),
-      Body: value,
+      Body: mapValueToS3(value, _opts),
       ContentType: 'application/json',
       ...optionsToAdd,
     }));
   };
 
-  const removeItem = async (key: string, _opts?: MTBaseDriverRequestOptions) => {
+  const removeItem = async (key: string, _opts?: TCombinedTransOpts) => {
     await client.send(new DeleteObjectCommand({
       Bucket,
       Key: mapToS3Key(key, _opts),
     }));
   };
 
-  const getKeys = async (base?: string, _opts?: MTBaseDriverRequestOptions) => {
+  const getKeys = async (base?: string, _opts?: TCombinedTransOpts) => {
     const keys: string[] = [];
     let continuationToken: string | undefined;
     const maxDepth = _opts?.maxDepth ?? resolvedDriverOptions.maxDepth ?? undefined;
@@ -120,8 +124,6 @@ export const nativeDriverAWS = (
           const mapped = mapFromS3Key(object.Key, _opts);
           // console.debug(`Mapped S3 object  -- MAPPED: ${mapped} -- KEY: ${object.Key}`);
           if (mapped) {
-            // This can be optimized later
-            // console.debug(`In filter depth: ${filterKeyByDepthByOptions(mapped, resolvedDriverOptions, opts)} -- MAPPED: ${mapped}  `);
             if (filterKeyByDepth(mapped, maxDepth)) {
               keys.push(mapped);
             }

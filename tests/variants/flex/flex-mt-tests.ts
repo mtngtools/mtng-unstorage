@@ -29,7 +29,7 @@ export function flexMtTests(opts: FlexVariantTestOptions) {
           ...defaultOptions,
           s3Client: makeMockClient(),
           toStorageKey: () => { throw new Error('Key mapping failed') },
-          fromStorageKey: (s3Key: string) => s3Key,
+          fromStorageKey: (params) => params.key,
         }))
 
         await expect(storage.setItem('error:key', 'value')).rejects.toThrow('Key mapping failed')
@@ -41,7 +41,7 @@ export function flexMtTests(opts: FlexVariantTestOptions) {
         storage.mount('error', makeDriver({
           ...defaultOptions,
           s3Client: mockClient,
-          toStorageKey: (key: string) => key,
+          toStorageKey: (params) => params.key,
           fromStorageKey: () => { throw new Error('Key unmapping failed') },
         }))
 
@@ -68,7 +68,7 @@ export function flexMtTests(opts: FlexVariantTestOptions) {
           ...defaultOptions,
           s3Client: makeMockClient(),
           toStorageValue: () => { throw new Error('Value mapping failed') },
-          fromStorageValue: (value: string) => JSON.parse(value),
+          fromStorageValue: (params) => JSON.parse(params.input as string),
         }))
 
         await expect(storage.setItem('error:key', 'value')).rejects.toThrow('Value mapping failed')
@@ -79,7 +79,7 @@ export function flexMtTests(opts: FlexVariantTestOptions) {
         storage.mount('error', makeDriver({
           ...defaultOptions,
           s3Client: makeMockClient(),
-          toStorageValue: (value: any) => JSON.stringify(value),
+          toStorageValue: (params) => JSON.stringify(params.input),
           fromStorageValue: () => { throw new Error('Value unmapping failed') },
         }))
 

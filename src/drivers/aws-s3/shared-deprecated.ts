@@ -7,10 +7,10 @@
 
 import { S3Client, GetObjectCommandInput, PutObjectCommandInput, DeleteObjectCommandInput } from '@aws-sdk/client-s3';
 import type { ResolvedAWSS3DriverOptions } from './types.js';
-import type { MTBaseDriverRequestOptions } from '../../types.js';
+import type { MTBaseDriverTransactionOptions } from '../../types.js';
 import { mapUnstorageKeyToS3Key } from './shared-public.js';
 import { buildS3SearchPrefix } from './shared-public.js';
-import { filterKeyByDepthByOptions } from '../../utils.js';
+import { filterKeyByDepth } from 'unstorage';
 
 /**
  * @deprecated Use mapUnstorageKeyToS3Key instead. This alias will be removed in a future major release.
@@ -67,9 +67,9 @@ export async function deleteS3Object(
 export async function listS3KeysMapped(
   client: S3Client,
   resolvedDriverOptions: ResolvedAWSS3DriverOptions,
-  mapKey: (key: string, resolvedDriverOptions: ResolvedAWSS3DriverOptions, requestOpts?: MTBaseDriverRequestOptions) => string | undefined,
+  mapKey: (key: string, resolvedDriverOptions: ResolvedAWSS3DriverOptions, requestOpts?: MTBaseDriverTransactionOptions) => string | undefined,
   basePrefix: string,
-  opts?: MTBaseDriverRequestOptions
+  opts?: MTBaseDriverTransactionOptions
 ): Promise<string[]> {
   const { ListObjectsV2Command } = await import('@aws-sdk/client-s3');
   const keys: string[] = [];
@@ -91,8 +91,9 @@ export async function listS3KeysMapped(
         // console.debug(`Mapped S3 object  -- MAPPED: ${mapped} -- KEY: ${object.Key}`);
         if (mapped) {
           // This can be optimized later
-          // console.debug(`In filter depth: ${filterKeyByDepthByOptions(mapped, resolvedDriverOptions, opts)} -- MAPPED: ${mapped}  `);
-          if (filterKeyByDepthByOptions(mapped, resolvedDriverOptions, opts)) {
+          const maxDepth = opts?.maxDepth ?? resolvedDriverOptions.maxDepth ?? undefined;
+          // console.debug(`In filter depth: ${filterKeyByDepth(mapped, maxDepth)} -- MAPPED: ${mapped}  `);
+          if (filterKeyByDepth(mapped, maxDepth)) {
             keys.push(mapped);
           }
         }

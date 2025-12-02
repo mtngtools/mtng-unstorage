@@ -8,8 +8,6 @@
 export {
   validateKey,
   validateBaseDriverOptions,
-  filterKeyByDepth,
-  filterKeyByDepthByOptions,
   clearByListingAndBatching
 } from './common-storage.js';
 

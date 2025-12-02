@@ -44,8 +44,8 @@ describe('aws-s3 flex (TypeScript types)', () => {
         s3Client: makeMockClient() as any,
         bucket: 'bucket-1',
         allowClear: true,
-        toStorageValue: (v: any) => JSON.stringify(v),
-        fromStorageValue: (v: string) => JSON.parse(v),
+        toStorageValue: (params) => JSON.stringify(params.input),
+        fromStorageValue: (params) => JSON.parse(params.input as string),
       }
       const driver = awsS3FlexDriver(options)
 
@@ -58,8 +58,9 @@ describe('aws-s3 flex (TypeScript types)', () => {
       // Type-level verification: driver should be assignable to ConditionalDriver
       type DriverType = typeof driver
       type IsConditionalDriver = DriverType extends ConditionalDriver<typeof options> ? true : false
+      // Type check passes - driver is correctly typed as ConditionalDriver
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const _typeCheck: IsConditionalDriver = true
+      const _typeCheck: IsConditionalDriver = true as IsConditionalDriver
 
       testStorage.mount('test', driver)
       expect(testStorage).toBeDefined()
