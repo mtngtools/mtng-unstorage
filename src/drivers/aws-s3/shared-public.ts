@@ -7,7 +7,7 @@
 
 import { validateKey } from '../../utils.js';
 import type { AwsS3DriverOptions } from './types.js';
-import type { MTBaseDriverRequestOptions, ResolvedMTFlexDriverOptions } from '../../types.js';
+import type { MTBaseDriverTransactionOptions, ResolvedMTFlexDriverOptions } from '../../types.js';
 import { S3Client } from '@aws-sdk/client-s3';
 import { validateBaseDriverOptions, validateAWSRegionAndCredentials } from '../../utils.js';
 
@@ -61,11 +61,12 @@ export function buildS3SearchPrefix(
  * Converts an unstorage key to an S3 object key using the provided options
  * (S3-driver specific)
  */
-export function mapUnstorageKeyToS3Key(
-  key: string,
-  resolvedDriverOptions: { fullBasePrefix: string },
-  _requestOpts?: MTBaseDriverRequestOptions
-): string {
+export function mapUnstorageKeyToS3Key(params: {
+  key: string;
+  resolvedDriverOptions: { fullBasePrefix: string };
+  transactionOptions?: MTBaseDriverTransactionOptions;
+}): string {
+  const { key, resolvedDriverOptions } = params;
   const s3CompatibleKey = key.replace(/:/g, '/');
   validateKey(s3CompatibleKey);
   return joinS3Key(resolvedDriverOptions.fullBasePrefix, s3CompatibleKey);
@@ -79,11 +80,11 @@ export function mapUnstorageKeyToS3Key(
  *   toS3KeyWithJSONExt('user:123', { fullBasePrefix: 'prefix/base' }) -> 'prefix/base/user:123.json'
  *   toS3KeyWithJSONExt('folder:config', { fullBasePrefix: '' }) -> 'folder:config.json'
  */
-export const toS3KeyWithJSONExt = (
-  key: string,
-  resolvedDriverOptions: ResolvedMTFlexDriverOptions,
-  requestOpts?: MTBaseDriverRequestOptions,
-): string => `${mapUnstorageKeyToS3Key(key, resolvedDriverOptions, requestOpts)}.json`;
+export const toS3KeyWithJSONExt = (params: {
+  key: string;
+  resolvedDriverOptions: ResolvedMTFlexDriverOptions;
+  transactionOptions?: MTBaseDriverTransactionOptions;
+}): string => `${mapUnstorageKeyToS3Key(params)}.json`;
 
 /**
  * Map an S3 object key to an unstorage key.
@@ -91,11 +92,12 @@ export const toS3KeyWithJSONExt = (
  * - Falls back to the default fromS3StorageKey otherwise
  * Returns undefined when no valid mapping is produced.
  */
-export function mapS3ObjectKeyToUnstorageKey(
-  key: string, // s3 object key
-  resolvedDriverOptions: ResolvedMTFlexDriverOptions,
-  _requestOpts?: MTBaseDriverRequestOptions
-): string {
+export function mapS3ObjectKeyToUnstorageKey(params: {
+  key: string; // s3 object key
+  resolvedDriverOptions: ResolvedMTFlexDriverOptions;
+  transactionOptions?: MTBaseDriverTransactionOptions;
+}): string {
+  const { key, resolvedDriverOptions } = params;
   if (!key) return '';
   let retKey = key;
 
@@ -121,16 +123,16 @@ export function mapS3ObjectKeyToUnstorageKey(
  *  fromS3KeyWithJSONExt('folder:config.json', { fullBasePrefix: '' }) -> 'folder:config'
  *  fromS3KeyWithJSONExt('folder:config', { fullBasePrefix: '' }) -> 'folder:config'
  */
-export const fromS3KeyWithJSONExt = (
-  s3Key: string,
-  resolvedDriverOptions: { fullBasePrefix: string },
-  _requestOpts?: MTBaseDriverRequestOptions,
-): string => {
-  const base = mapS3ObjectKeyToUnstorageKey(
-    s3Key,
-    resolvedDriverOptions as unknown as ResolvedMTFlexDriverOptions,
-    _requestOpts,
-  );
+export const fromS3KeyWithJSONExt = (params: {
+  key: string;
+  resolvedDriverOptions: { fullBasePrefix: string };
+  transactionOptions?: MTBaseDriverTransactionOptions;
+}): string => {
+  const base = mapS3ObjectKeyToUnstorageKey({
+    key: params.key,
+    resolvedDriverOptions: params.resolvedDriverOptions as unknown as ResolvedMTFlexDriverOptions,
+    transactionOptions: params.transactionOptions,
+  });
   return base.endsWith('.json') ? base.slice(0, -5) : base;
 };
 

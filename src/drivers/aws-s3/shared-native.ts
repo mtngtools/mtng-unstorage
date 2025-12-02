@@ -20,10 +20,10 @@ export const nativeDriverAWS = (
     Bucket: string;
     fullBasePrefix: string;
     maxDepth?: number;
-    mapToS3Key: (key: string) => string;
-    mapFromS3Key: (key: string) => string;
-    mapValueToS3: (value: any) => string;
-    mapValueFromS3: (value: string) => any;
+    mapToS3Key: (key: string, opts?: MTBaseDriverRequestOptions) => string;
+    mapFromS3Key: (key: string, opts?: MTBaseDriverRequestOptions) => string;
+    mapValueToS3: (value: any, opts?: MTBaseDriverRequestOptions) => string;
+    mapValueFromS3: (value: string, opts?: MTBaseDriverRequestOptions) => any;
   }) => {
 
   const {
@@ -40,7 +40,7 @@ export const nativeDriverAWS = (
     try {
       const command = new HeadObjectCommand({
         Bucket,
-        Key: mapToS3Key(key),
+        Key: mapToS3Key(key, _opts),
       });
 
       await client.send(command);
@@ -55,11 +55,11 @@ export const nativeDriverAWS = (
     try {
       const body = await getS3Body(client, {
         Bucket,
-        Key: mapToS3Key(key),
+        Key: mapToS3Key(key, _opts),
       });
       if (!body) return null;
       const content = await streamToString(body);
-      return await mapValueFromS3(content) as T;
+      return await mapValueFromS3(content, _opts) as T;
     } catch {
       return null;
     }
@@ -72,8 +72,8 @@ export const nativeDriverAWS = (
 
     await client.send(new PutObjectCommand({
       Bucket,
-      Key: mapToS3Key(key),
-      Body: mapValueToS3(value),
+      Key: mapToS3Key(key, _opts),
+      Body: mapValueToS3(value, _opts),
       ContentType: 'application/json',
       ...optionsToAdd,
     }));
@@ -86,7 +86,7 @@ export const nativeDriverAWS = (
 
     await client.send(new PutObjectCommand({
       Bucket,
-      Key: mapToS3Key(key),
+      Key: mapToS3Key(key, _opts),
       Body: value,
       ContentType: 'application/json',
       ...optionsToAdd,
@@ -96,7 +96,7 @@ export const nativeDriverAWS = (
   const removeItem = async (key: string, _opts?: MTBaseDriverRequestOptions) => {
     await client.send(new DeleteObjectCommand({
       Bucket,
-      Key: mapToS3Key(key),
+      Key: mapToS3Key(key, _opts),
     }));
   };
 
@@ -117,7 +117,7 @@ export const nativeDriverAWS = (
         for (const object of response.Contents) {
           if (!object.Key) continue;
 
-          const mapped = mapFromS3Key(object.Key);
+          const mapped = mapFromS3Key(object.Key, _opts);
           // console.debug(`Mapped S3 object  -- MAPPED: ${mapped} -- KEY: ${object.Key}`);
           if (mapped) {
             // This can be optimized later
