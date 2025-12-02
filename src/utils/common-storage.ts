@@ -5,8 +5,7 @@
  * are used by all drivers regardless of provider or variant.
  */
 
-import type { MTBaseDriverOptions, MTBaseDriverRequestOptions, ResolvedMTBaseDriverOptions } from '../types/index.js';
-
+import type { MTBaseDriverOptions, ResolvedMTBaseDriverOptions } from '../types/index.js';
 /**
  * Validates that a key is safe for storage
  */
@@ -36,29 +35,6 @@ export function validateBaseDriverOptions(
     allowClear: opts.allowClear ?? false,
   } as Omit<ResolvedMTBaseDriverOptions, 'fullBasePrefix'>; // fullBasePrefix is computed by caller
 }
-
-/**
- * Filters a key by maxDepth, counting ':' separators
- * @deprecated use unstorage version
- */
-export function filterKeyByDepth(key: string, maxDepth: number | undefined): boolean {
-  if (maxDepth === undefined) {
-    return true;
-  }
-
-  // Count occurrences of ':'
-  const count = key.split(':').length - 1;
-  return count <= maxDepth;
-}
-
-/**
- * Filters a key by maxDepth, determining maxDepth from driver and request options
- */
-export const filterKeyByDepthByOptions = (
-  key: string,
-  resolvedDriverOptions: MTBaseDriverOptions,
-  requestOpts?: MTBaseDriverRequestOptions,
-  ) => filterKeyByDepth(key, requestOpts?.maxDepth ?? resolvedDriverOptions.maxDepth ?? undefined);
 
 /**
  * Clear helper that lists keys and removes them in batches.

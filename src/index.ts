@@ -21,7 +21,7 @@
 // Export common types
 export type { 
   MTBaseDriverOptions,
-  MTBaseDriverRequestOptions,
+  MTBaseDriverTransactionOptions,
   ConditionalDriver,
   ReadOnlyDriver,
   WritableDriver,

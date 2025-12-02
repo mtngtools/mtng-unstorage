@@ -2,7 +2,7 @@ import { defineDriver } from 'unstorage';
 import type { Driver } from 'unstorage';
 import type { StorageValue } from 'unstorage';
 import type { AwsS3FlexDriverOptions, ResolvedAwsS3FlexDriverOptions } from './types';
-import type { MTBaseDriverTransactionOptions, MTBaseDriverRequestOptions } from '../../types/index.js';
+import type { MTBaseDriverTransactionOptions, DriverFactory } from '../../types/index.js';
 import { mapUnstorageKeyToS3Key, validateS3Options, createS3Client, mapS3ObjectKeyToUnstorageKey } from './shared-public.js';
 import { nativeDriverAWS } from './shared-native.js';
 import { AWS_S3_FLEX_DRIVER_NAME } from './types.js';
@@ -42,40 +42,49 @@ import { AWS_S3_FLEX_DRIVER_NAME } from './types.js';
 function awsS3FlexDriver<
   TAddlDrvOpts = unknown,
   TUnstorageVal extends StorageValue = StorageValue,
-  TNativeStorageVal extends StorageValue = string,
-  TAddlTransOpts = MTBaseDriverTransactionOptions
->(options: AwsS3FlexDriverOptions<TAddlDrvOpts, TUnstorageVal, TNativeStorageVal, TAddlTransOpts>): Driver {
-  return defineDriver(() => {
+  TAddlTransOpts = unknown,
+>(options: AwsS3FlexDriverOptions<TAddlDrvOpts, TUnstorageVal, string, TAddlTransOpts>): Driver {
+  type OptionsType = AwsS3FlexDriverOptions<TAddlDrvOpts, TUnstorageVal, string, TAddlTransOpts>;
+  const factory = defineDriver(((opts: OptionsType) => {
   // We'll resolve mappers after validation so defaults can reference the
   // validated options (needed for the built-in toS3StorageKey/fromS3StorageKey).
 
+  type NativeStorageVal = string;
+  type ResolvedDriverOptions = ResolvedAwsS3FlexDriverOptions<TAddlDrvOpts, TUnstorageVal, NativeStorageVal, TAddlTransOpts>; 
+  type TransactionOptions = MTBaseDriverTransactionOptions & TAddlTransOpts
   const resolvedDriverOptions = validateS3Options({
-    ...options,
-    name: options.name ?? AWS_S3_FLEX_DRIVER_NAME,
-    storagePrefix: options.storagePrefix ?? options.s3StoragePrefix ?? '',
-  }) as ResolvedAwsS3FlexDriverOptions<TAddlDrvOpts, TUnstorageVal, TNativeStorageVal, TAddlTransOpts>;
+    ...opts,
+    name: opts.name ?? AWS_S3_FLEX_DRIVER_NAME,
+    storagePrefix: opts.storagePrefix ?? opts.s3StoragePrefix ?? '',
+  }) as ResolvedDriverOptions;
 
   const { bucket: Bucket, name, readOnly = false, allowClear = false } = resolvedDriverOptions;
 
   // Build client if not provided using shared helper
   const client = createS3Client(resolvedDriverOptions);
 
-  const toStorageKey = options.toStorageKey ?? ((params: { key: string; resolvedDriverOptions: ResolvedAwsS3FlexDriverOptions<TAddlDrvOpts, string, string, TAddlTransOpts>; transactionOptions?: MTBaseDriverTransactionOptions & TAddlTransOpts }) => mapUnstorageKeyToS3Key({ key: params.key, resolvedDriverOptions: params.resolvedDriverOptions as any, transactionOptions: params.transactionOptions }));
-  const fromStorageKey = options.fromStorageKey ?? ((params: { key: string; resolvedDriverOptions: ResolvedAwsS3FlexDriverOptions<TAddlDrvOpts, string, string, TAddlTransOpts>; transactionOptions?: MTBaseDriverTransactionOptions & TAddlTransOpts }) => mapS3ObjectKeyToUnstorageKey({ key: params.key, resolvedDriverOptions: params.resolvedDriverOptions as any, transactionOptions: params.transactionOptions }));
+  type StorageKeyMappingParams = { 
+    key: string; 
+    resolvedDriverOptions: ResolvedDriverOptions; 
+    transactionOptions?: TransactionOptions
+  };
+
+  const toStorageKey = opts.toStorageKey ?? ((params: StorageKeyMappingParams) => mapUnstorageKeyToS3Key(params));
+  const fromStorageKey = opts.fromStorageKey ?? ((params: StorageKeyMappingParams) => mapS3ObjectKeyToUnstorageKey(params));
   // Value mapping operates on raw values/strings; defaults are pass-through
-  const toStorageValue = options.toStorageValue;
-  const fromStorageValue = options.fromStorageValue;
+  const toStorageValue = opts.toStorageValue;
+  const fromStorageValue = opts.fromStorageValue;
 
   // Runtime validation for value mapping: if user provided toStorageValue, require fromStorageValue unless readOnly
-  if (options.toStorageValue && !options.fromStorageValue && !readOnly) {
+  if (opts.toStorageValue && !opts.fromStorageValue && !readOnly) {
     throw new Error('toStorageValue provided without fromStorageValue; provide both or set readOnly: true');
   }
 
-  const mapToS3Key = (key:string, opts?: MTBaseDriverRequestOptions) => toStorageKey({ key, resolvedDriverOptions: resolvedDriverOptions as any, transactionOptions: opts as MTBaseDriverTransactionOptions & TAddlTransOpts });
-  const mapFromS3Key = (key:string, opts?: MTBaseDriverRequestOptions) => fromStorageKey({ key, resolvedDriverOptions: resolvedDriverOptions as any, transactionOptions: opts as MTBaseDriverTransactionOptions & TAddlTransOpts });
+  const mapToS3Key = (key:string, transactionOptions?: TransactionOptions) => toStorageKey({ key, resolvedDriverOptions, transactionOptions });
+  const mapFromS3Key = (key:string, transactionOptions?: TransactionOptions) => fromStorageKey({ key, resolvedDriverOptions, transactionOptions });
 
-  const mapValueToS3 = (value: any, opts?: MTBaseDriverRequestOptions) => toStorageValue ? toStorageValue({ input: value, resolvedDriverOptions: resolvedDriverOptions as any, transactionOptions: opts as MTBaseDriverTransactionOptions & TAddlTransOpts }) : value;
-  const mapValueFromS3 = (value: any, opts?: MTBaseDriverRequestOptions) => fromStorageValue ? fromStorageValue({ input: value, resolvedDriverOptions: resolvedDriverOptions as any, transactionOptions: opts as MTBaseDriverTransactionOptions & TAddlTransOpts }) : value;
+  const mapValueToS3 = (input: TUnstorageVal, transactionOptions?: TransactionOptions) => toStorageValue ? toStorageValue({ input, resolvedDriverOptions, transactionOptions }) : input;
+  const mapValueFromS3 = (input: NativeStorageVal, transactionOptions?: TransactionOptions) => fromStorageValue ? fromStorageValue({ input, resolvedDriverOptions, transactionOptions }) : input;
 
   const {
     hasItem,
@@ -84,7 +93,7 @@ function awsS3FlexDriver<
     removeItem,
     getKeys,
     clear,
-  } = nativeDriverAWS( 'flex',
+  } = nativeDriverAWS<TUnstorageVal, TAddlTransOpts>( 'flex',
       {
       client,
       mapToS3Key,
@@ -113,7 +122,8 @@ function awsS3FlexDriver<
       clear: clear,
     }),
     };
-  })(options);
+  }) as DriverFactory<OptionsType, never>);
+  return factory(options) as Driver;
 }
 
 export default awsS3FlexDriver;

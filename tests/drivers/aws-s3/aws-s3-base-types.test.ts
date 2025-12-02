@@ -23,6 +23,8 @@ describe('aws-s3 base (TypeScript types)', () => {
   }
 
   const makeDriver = (opts: Partial<AwsS3DriverOptions> = {}) => {
+    // @ts-expect-error - Spreading Partial options with discriminated union credentials causes type error
+    // The driver handles credential validation at runtime, so this is safe
     return awsS3Driver({ ...defaultOptions, ...opts, s3Client: opts.s3Client || makeMockClient() as any })
   }
 

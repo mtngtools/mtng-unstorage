@@ -44,8 +44,8 @@ describe('aws-s3 driver comparison via storage.mount()', () => {
         storagePrefix: 'app-sessions/',
         allowClear: true,
         // Include fullBasePrefix when mapping to S3 keys so listing under prefix finds the objects
-        toStorageKey: (key: string, opts: any) => joinS3Key(opts.fullBasePrefix, `session-${key}.json`),
-        fromStorageKey: (s3Key: string, opts: any) => mapS3ObjectKeyToUnstorageKey(s3Key, opts).replace(/^session-/, '').replace(/\.json$/, '')
+        toStorageKey: (params) => joinS3Key(params.resolvedDriverOptions.fullBasePrefix, `session-${params.key}.json`),
+        fromStorageKey: (params) => mapS3ObjectKeyToUnstorageKey(params).replace(/^session-/, '').replace(/\.json$/, '')
       }))
     })
 
@@ -268,8 +268,8 @@ describe('aws-s3 driver comparison via storage.mount()', () => {
         bucket: 'session-bucket',
         storagePrefix: 'app-sessions/',
         allowClear: true,
-        toStorageKey: (key: string, opts) => joinS3Key(opts.fullBasePrefix, `session-${key}.json`),
-        fromStorageKey: (s3Key: string, opts) => mapS3ObjectKeyToUnstorageKey(s3Key, opts).replace(/^session-/, '').replace(/\.json$/, '')
+        toStorageKey: (params) => joinS3Key(params.resolvedDriverOptions.fullBasePrefix, `session-${params.key}.json`),
+        fromStorageKey: (params) => mapS3ObjectKeyToUnstorageKey(params).replace(/^session-/, '').replace(/\.json$/, '')
       }
 
       const baseDriver = awsS3Driver(baseOptions)

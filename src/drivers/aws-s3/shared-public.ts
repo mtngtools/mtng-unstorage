@@ -94,7 +94,7 @@ export const toS3KeyWithJSONExt = (params: {
  */
 export function mapS3ObjectKeyToUnstorageKey(params: {
   key: string; // s3 object key
-  resolvedDriverOptions: ResolvedMTFlexDriverOptions;
+  resolvedDriverOptions: { fullBasePrefix: string };
   transactionOptions?: MTBaseDriverTransactionOptions;
 }): string {
   const { key, resolvedDriverOptions } = params;

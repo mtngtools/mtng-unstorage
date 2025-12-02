@@ -96,13 +96,13 @@ describe('shared-public S3 utilities', () => {
     const resolved = makeResolved({ storagePrefix: 'root', base: 'app' })
 
     it('maps and normalizes unstorage key to S3 key', () => {
-      expect(mapUnstorageKeyToS3Key('user//data', resolved)).toBe('root/app/user/data')
-      expect(mapUnstorageKeyToS3Key('/user/', resolved)).toBe('root/app/user')
+      expect(mapUnstorageKeyToS3Key({ key: 'user//data', resolvedDriverOptions: resolved })).toBe('root/app/user/data')
+      expect(mapUnstorageKeyToS3Key({ key: '/user/', resolvedDriverOptions: resolved })).toBe('root/app/user')
     })
 
     it('validates key', () => {
-      expect(() => mapUnstorageKeyToS3Key('', resolved)).toThrow('Key must be a non-empty string')
-      expect(() => mapUnstorageKeyToS3Key('../bad', resolved)).toThrow('Key cannot contain ".." path segments')
+      expect(() => mapUnstorageKeyToS3Key({ key: '', resolvedDriverOptions: resolved })).toThrow('Key must be a non-empty string')
+      expect(() => mapUnstorageKeyToS3Key({ key: '../bad', resolvedDriverOptions: resolved })).toThrow('Key cannot contain ".." path segments')
     })
   })
 
@@ -110,8 +110,8 @@ describe('shared-public S3 utilities', () => {
     const resolved = makeResolved({ storagePrefix: 'root', base: 'app' }) as any
 
     it('strips fullBasePrefix and converts to : format', () => {
-      expect(mapS3ObjectKeyToUnstorageKey('root/app/dir/file', resolved)).toBe('dir:file')
-      expect(mapS3ObjectKeyToUnstorageKey('root/app', resolved)).toBe('')
+      expect(mapS3ObjectKeyToUnstorageKey({ key: 'root/app/dir/file', resolvedDriverOptions: resolved })).toBe('dir:file')
+      expect(mapS3ObjectKeyToUnstorageKey({ key: 'root/app', resolvedDriverOptions: resolved })).toBe('')
     })
   })
 
@@ -119,18 +119,18 @@ describe('shared-public S3 utilities', () => {
     const resolved = makeResolved({ storagePrefix: 'root', base: 'app' })
 
     it('toS3KeyWithJSONExt appends .json only once', () => {
-      expect(toS3KeyWithJSONExt('user:123', resolved)).toBe('root/app/user/123.json')
-      expect(toS3KeyWithJSONExt('folder:config', resolved)).toBe('root/app/folder/config.json')
+      expect(toS3KeyWithJSONExt({ key: 'user:123', resolvedDriverOptions: resolved })).toBe('root/app/user/123.json')
+      expect(toS3KeyWithJSONExt({ key: 'folder:config', resolvedDriverOptions: resolved })).toBe('root/app/folder/config.json')
     })
 
     it('fromS3KeyWithJSONExt strips .json and removes base prefix', () => {
       // With base prefix
-      expect(fromS3KeyWithJSONExt('root/app/user:123.json', resolved)).toBe('user:123')
+      expect(fromS3KeyWithJSONExt({ key: 'root/app/user:123.json', resolvedDriverOptions: resolved })).toBe('user:123')
       // Without base prefix
       const noBase = makeResolved({ storagePrefix: '', base: '' })
-      expect(fromS3KeyWithJSONExt('folder:config.json', noBase)).toBe('folder:config')
+      expect(fromS3KeyWithJSONExt({ key: 'folder:config.json', resolvedDriverOptions: noBase })).toBe('folder:config')
       // No .json suffix
-      expect(fromS3KeyWithJSONExt('folder:config', noBase)).toBe('folder:config')
+      expect(fromS3KeyWithJSONExt({ key: 'folder:config', resolvedDriverOptions: noBase })).toBe('folder:config')
     })
   })
 

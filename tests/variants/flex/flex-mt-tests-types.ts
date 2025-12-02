@@ -26,8 +26,8 @@ export function flexMtTestsTypes(opts: FlexVariantTypeTestOptions) {
       const driver = makeDriver({
         ...defaultOptions,
         s3Client: makeMockClient(),
-        toStorageValue: (v: any) => JSON.stringify(v),
-        fromStorageValue: (v: string) => JSON.parse(v),
+        toStorageValue: (params) => JSON.stringify(params.input),
+        fromStorageValue: (params) => JSON.parse(params.input as string),
       })
 
       // Verify driver has expected methods (runtime check)
@@ -38,7 +38,6 @@ export function flexMtTestsTypes(opts: FlexVariantTypeTestOptions) {
       // Type-level verification: driver should be assignable to ConditionalDriver
       // Type checking only - verify the type compiles correctly
       // The type check happens at compile time - we just need to reference the type
-      // @ts-expect-error - intentionally unused for type checking
       const _typeCheck: typeof driver = driver
     })
 
@@ -47,14 +46,13 @@ export function flexMtTestsTypes(opts: FlexVariantTypeTestOptions) {
         ...defaultOptions,
         s3Client: makeMockClient(),
         readOnly: true,
-        fromStorageValue: (v: string) => JSON.parse(v),
+        fromStorageValue: (params) => JSON.parse(params.input as string),
       })
 
       // Type inference should work with generic
       const userValue = await driver.getItem('test-key') as { name: string } | null
       // TypeScript should correctly infer the return type
       // Type checking only - value is intentionally unused
-      // @ts-expect-error - intentionally unused for type checking
       const _userCheck: { name: string } | null = userValue
 
       expect(userValue).toBeNull()
@@ -65,7 +63,7 @@ export function flexMtTestsTypes(opts: FlexVariantTypeTestOptions) {
         ...defaultOptions,
         s3Client: makeMockClient(),
         readOnly: true,
-        fromStorageValue: (v: string) => JSON.parse(v),
+        fromStorageValue: (params) => JSON.parse(params.input as string),
       })
 
       // Runtime check: read-only driver should not have write methods
@@ -81,11 +79,8 @@ export function flexMtTestsTypes(opts: FlexVariantTypeTestOptions) {
       type HasClear = DriverType extends { clear: any } ? true : false
 
       // These should be false (methods don't exist)
-      // @ts-expect-error - intentionally unused for type checking
       const _setItemCheck: HasSetItem = false
-      // @ts-expect-error - intentionally unused for type checking
       const _removeItemCheck: HasRemoveItem = false
-      // @ts-expect-error - intentionally unused for type checking
       const _clearCheck: HasClear = false
     })
   })
