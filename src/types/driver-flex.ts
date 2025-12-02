@@ -14,14 +14,22 @@ export type TransformKeyForStorage<
       TInput=string,
       TResult=string | null |undefined,
       TAddlTransOpts=MTBaseDriverTransactionOptions,
-      > = (key: TInput, resolvedDriverOptions: ResolvedMTFlexDriverOptions<TAddlDrvOpts, string, string, TAddlTransOpts> & TAddlDrvOpts, requestOpts?: any) => TResult;
+      > = (params: {
+        key: TInput;
+        resolvedDriverOptions: ResolvedMTFlexDriverOptions<TAddlDrvOpts, string, string, TAddlTransOpts> & TAddlDrvOpts;
+        transactionOptions?: MTBaseDriverTransactionOptions & TAddlTransOpts;
+      }) => TResult;
 
 export type TransformValueForStorage<
       TAddlDrvOpts=unknown,
       TInput extends StorageValue=string,
       TResult extends StorageValue=string,
       TAddlTransOpts=MTBaseDriverTransactionOptions,
-      > = (input: TInput, resolvedDriverOptions: ResolvedMTFlexDriverOptions<TAddlDrvOpts, TResult, TInput, TAddlTransOpts> & TAddlDrvOpts, requestOpts?: any) => TResult | Promise<TResult> | null | undefined;
+      > = (params: {
+        input: TInput;
+        resolvedDriverOptions: ResolvedMTFlexDriverOptions<TAddlDrvOpts, TResult, TInput, TAddlTransOpts> & TAddlDrvOpts;
+        transactionOptions?: MTBaseDriverTransactionOptions & TAddlTransOpts;
+      }) => TResult | Promise<TResult> | null | undefined;
 
 /**
  * Options added to flex drivers that may provide custom key mapping functions.

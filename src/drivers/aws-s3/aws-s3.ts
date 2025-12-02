@@ -3,7 +3,7 @@ import type { AwsS3DriverOptions  } from './types';
 import { mapUnstorageKeyToS3Key, validateS3Options, createS3Client, mapS3ObjectKeyToUnstorageKey } from './shared-public.js';
 import { nativeDriverAWS } from './shared-native.js';
 import { AWS_S3_DRIVER_NAME } from './types.js';
-import type {  ConditionalDriver, DriverFactory } from '../../types.js';
+import type {  ConditionalDriver, DriverFactory, MTBaseDriverRequestOptions } from '../../types.js';
 
 /**
  * AWS S3 storage driver for unstorage.
@@ -41,8 +41,8 @@ const awsS3Driver: DriverFactory<AwsS3DriverOptions, never> = defineDriver((opti
   // Build client if not provided using shared helper
   const client = createS3Client(resolvedDriverOptions);
 
-  const mapToS3Key = (key:string) => mapUnstorageKeyToS3Key(key, resolvedDriverOptions);
-  const mapFromS3Key = (key:string) => mapS3ObjectKeyToUnstorageKey(key, resolvedDriverOptions);
+  const mapToS3Key = (key:string, opts?: MTBaseDriverRequestOptions) => mapUnstorageKeyToS3Key({ key, resolvedDriverOptions, transactionOptions: opts });
+  const mapFromS3Key = (key:string, opts?: MTBaseDriverRequestOptions) => mapS3ObjectKeyToUnstorageKey({ key, resolvedDriverOptions, transactionOptions: opts });
 
   const mapValueToS3 = (value: any) => value;
   const mapValueFromS3 = (value: string) => value;
