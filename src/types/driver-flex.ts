@@ -7,19 +7,21 @@
 
 import type { StorageValue } from "unstorage";
 import type { Prettify } from "./helpers.js";
-import type { MTBaseDriverOptions, ResolvedMTBaseDriverOptions } from "./driver-base.js";
+import type { MTBaseDriverOptions, ResolvedMTBaseDriverOptions, MTBaseDriverTransactionOptions } from "./driver-base.js";
 
 export type TransformKeyForStorage<
-      TDriverOptions=unknown, 
+      TAddlDrvOpts=unknown, 
       TInput=string,
       TResult=string | null |undefined,
-      > = (key: TInput, resolvedDriverOptions: ResolvedMTFlexDriverOptions & TDriverOptions, requestOpts?: any) => TResult;
+      TAddlTransOpts=MTBaseDriverTransactionOptions,
+      > = (key: TInput, resolvedDriverOptions: ResolvedMTFlexDriverOptions<TAddlDrvOpts, string, string, TAddlTransOpts> & TAddlDrvOpts, requestOpts?: any) => TResult;
 
 export type TransformValueForStorage<
-      TDriverOptions=unknown,
-      TInput=string,
-      TResult=string,
-      > = (input: TInput, resolvedDriverOptions: ResolvedMTFlexDriverOptions & TDriverOptions, requestOpts?: any) => TResult | Promise<TResult> | null | undefined;
+      TAddlDrvOpts=unknown,
+      TInput extends StorageValue=string,
+      TResult extends StorageValue=string,
+      TAddlTransOpts=MTBaseDriverTransactionOptions,
+      > = (input: TInput, resolvedDriverOptions: ResolvedMTFlexDriverOptions<TAddlDrvOpts, TResult, TInput, TAddlTransOpts> & TAddlDrvOpts, requestOpts?: any) => TResult | Promise<TResult> | null | undefined;
 
 /**
  * Options added to flex drivers that may provide custom key mapping functions.
@@ -30,9 +32,10 @@ export type TransformValueForStorage<
  *   or the driver must be configured as `readOnly: true`.
  */
 export type MTFlexKeyMappingOptions<
-      TDriverOptions=unknown,
+      TAddlDrvOpts=unknown,
       TUnstorageKey=string,
-      TNativeStorageKey=string,    
+      TNativeStorageKey=string,
+      TAddlTransOpts=MTBaseDriverTransactionOptions,
       > = (
   | {
       // no mapping functions
@@ -41,13 +44,13 @@ export type MTFlexKeyMappingOptions<
     }
   | {
       // both mapping functions provided
-      fromStorageKey: TransformKeyForStorage<TDriverOptions, TNativeStorageKey, TUnstorageKey>;
-      toStorageKey: TransformKeyForStorage<TDriverOptions, TUnstorageKey, TNativeStorageKey>;
+      fromStorageKey: TransformKeyForStorage<TAddlDrvOpts, TNativeStorageKey, TUnstorageKey, TAddlTransOpts>;
+      toStorageKey: TransformKeyForStorage<TAddlDrvOpts, TUnstorageKey, TNativeStorageKey, TAddlTransOpts>;
     }
   | {
       // readOnly mode: fromStorageKey required; toStorageKey optional
-      fromStorageKey: TransformKeyForStorage<TDriverOptions, TNativeStorageKey, TUnstorageKey>;
-      toStorageKey?: TransformKeyForStorage<TDriverOptions, TUnstorageKey, TNativeStorageKey>;
+      fromStorageKey: TransformKeyForStorage<TAddlDrvOpts, TNativeStorageKey, TUnstorageKey, TAddlTransOpts>;
+      toStorageKey?: TransformKeyForStorage<TAddlDrvOpts, TUnstorageKey, TNativeStorageKey, TAddlTransOpts>;
       readOnly: true;
     }
 );
@@ -65,32 +68,34 @@ export type MTFlexKeyMappingOptions<
  *   or the driver must be configured as `readOnly: true`.
  */
 export type MTFlexValueMappingOptions<
-      TDriverOptions=MTBaseDriverOptions & unknown,
-      TUnstorageValue extends StorageValue=StorageValue,
-      TNativeStorageValue extends StorageValue=string,
+      TAddlDrvOpts=MTBaseDriverOptions & unknown,
+      TUnstorageVal extends StorageValue=StorageValue,
+      TNativeStorageVal extends StorageValue=string,
+      TAddlTransOpts=MTBaseDriverTransactionOptions,
       > = (
   | {
       toStorageValue?: never;
       fromStorageValue?: never;
     }
   | {
-      fromStorageValue: TransformValueForStorage<TDriverOptions, TNativeStorageValue, TUnstorageValue>;
-      toStorageValue: TransformValueForStorage<TDriverOptions, TUnstorageValue, TNativeStorageValue>;
+      fromStorageValue: TransformValueForStorage<TAddlDrvOpts, TNativeStorageVal, TUnstorageVal, TAddlTransOpts>;
+      toStorageValue: TransformValueForStorage<TAddlDrvOpts, TUnstorageVal, TNativeStorageVal, TAddlTransOpts>;
     }
     | {
-      fromStorageValue: TransformValueForStorage<TDriverOptions, TNativeStorageValue, TUnstorageValue>;
-      toStorageValue?: TransformValueForStorage<TDriverOptions, TUnstorageValue, TNativeStorageValue>;
+      fromStorageValue: TransformValueForStorage<TAddlDrvOpts, TNativeStorageVal, TUnstorageVal, TAddlTransOpts>;
+      toStorageValue?: TransformValueForStorage<TAddlDrvOpts, TUnstorageVal, TNativeStorageVal, TAddlTransOpts>;
       readOnly: true;
     }
 );
 
 export type MTFlexDriverOptions<
-      TDriverOptions=unknown,
-      TUnstorageValue extends StorageValue=StorageValue,
-      TNativeStorageValue extends StorageValue=string,
+      TAddlDrvOpts=unknown,
+      TUnstorageVal extends StorageValue=StorageValue,
+      TNativeStorageVal extends StorageValue=string,
+      TAddlTransOpts=MTBaseDriverTransactionOptions,
       > = Prettify<MTBaseDriverOptions
-        & MTFlexKeyMappingOptions<TDriverOptions, string, string>
-        & MTFlexValueMappingOptions<TDriverOptions, TUnstorageValue, TNativeStorageValue>
+        & MTFlexKeyMappingOptions<TAddlDrvOpts, string, string, TAddlTransOpts>
+        & MTFlexValueMappingOptions<TAddlDrvOpts, TUnstorageVal, TNativeStorageVal, TAddlTransOpts>
       >;
 
 /**
@@ -99,11 +104,12 @@ export type MTFlexDriverOptions<
  * plus any other validated fields.
  */
 export type ResolvedMTFlexDriverOptions<
-      TDriverOptions=unknown,
-      TUnstorageValue extends StorageValue=StorageValue,
-      TNativeStorageValue extends StorageValue=string,
+      TAddlDrvOpts=unknown,
+      TUnstorageVal extends StorageValue=StorageValue,
+      TNativeStorageVal extends StorageValue=string,
+      TAddlTransOpts=MTBaseDriverTransactionOptions,
       > = Prettify<ResolvedMTBaseDriverOptions
-          & MTFlexKeyMappingOptions<TDriverOptions, string, string>
-          & MTFlexValueMappingOptions<TDriverOptions, TUnstorageValue, TNativeStorageValue>
+          & MTFlexKeyMappingOptions<TAddlDrvOpts, string, string, TAddlTransOpts>
+          & MTFlexValueMappingOptions<TAddlDrvOpts, TUnstorageVal, TNativeStorageVal, TAddlTransOpts>
       >;
 

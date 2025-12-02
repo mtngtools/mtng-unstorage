@@ -7,7 +7,7 @@
  */
 
 import type { StorageValue } from 'unstorage';
-import type { Prettify, MTFlexDriverOptions } from '../../../types/index.js';
+import type { Prettify, MTFlexDriverOptions, MTBaseDriverTransactionOptions, ResolvedMTFlexDriverOptions } from '../../../types/index.js';
 import type { SharedAwsS3DriverOptions } from './types-base.js';
 
 /**
@@ -17,11 +17,26 @@ import type { SharedAwsS3DriverOptions } from './types-base.js';
  * No new fields are introduced here - this is purely a type combination.
  */
 export type AwsS3FlexDriverOptions<
-  TDriverOptions = unknown,
-  TUnstorageValue extends StorageValue = StorageValue,
-  TNativeStorageValue extends StorageValue = StorageValue,
+  TAddlDrvOpts = unknown,
+  TUnstorageVal extends StorageValue = StorageValue,
+  TNativeStorageVal extends StorageValue = StorageValue,
+  TAddlTransOpts = MTBaseDriverTransactionOptions,
 > = Prettify<
   SharedAwsS3DriverOptions
-  & MTFlexDriverOptions<TDriverOptions, TUnstorageValue, TNativeStorageValue>
+  & MTFlexDriverOptions<TAddlDrvOpts, TUnstorageVal, TNativeStorageVal, TAddlTransOpts>
+>;
+
+/**
+ * Resolved flex driver options for AWS S3.
+ * Combines ResolvedMTFlexDriverOptions with S3-specific shared options.
+ */
+export type ResolvedAwsS3FlexDriverOptions<
+  TAddlDrvOpts = unknown,
+  TUnstorageVal extends StorageValue = StorageValue,
+  TNativeStorageVal extends StorageValue = StorageValue,
+  TAddlTransOpts = MTBaseDriverTransactionOptions,
+> = Prettify<
+  ResolvedMTFlexDriverOptions<TAddlDrvOpts, TUnstorageVal, TNativeStorageVal, TAddlTransOpts>
+  & SharedAwsS3DriverOptions
 >;
 

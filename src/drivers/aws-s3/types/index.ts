@@ -24,7 +24,8 @@ export {
 
 // Flex variant types
 export type {
-  AwsS3FlexDriverOptions
+  AwsS3FlexDriverOptions,
+  ResolvedAwsS3FlexDriverOptions
 } from './types-flex.js';
 
 // Versioned variant types (future - currently empty)

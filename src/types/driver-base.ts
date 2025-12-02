@@ -65,6 +65,12 @@ export type MTBaseDriverRequestOptions = {
 }
 
 /**
+ * Transaction options for driver operations.
+ * This is the new name for transaction options, aliased to MTBaseDriverRequestOptions for backward compatibility.
+ */
+export type MTBaseDriverTransactionOptions = MTBaseDriverRequestOptions;
+
+/**
  * Base driver interface with all possible methods.
  * This represents the full set of methods a driver can implement.
  */
