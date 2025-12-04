@@ -14,7 +14,7 @@ We take the security of @mtngtools/unstorage seriously. If you believe you have 
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-Instead, please report them via email to: **contact@mtng.tech**
+Instead, please report them via email to: **tools(at)mtng(dot)site**
 
 You should receive a response within 48 hours. If for some reason you do not, please follow up via email to ensure we received your original message.
 
