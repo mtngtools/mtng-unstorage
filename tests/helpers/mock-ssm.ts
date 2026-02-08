@@ -51,6 +51,7 @@ export class MockSSMClient {
 
     if (/deleteparameter/i.test(ctorName)) {
       const Name = String(input.Name ?? '')
+      if (!this.storage.has(Name)) parameterNotFound()
       this.storage.delete(Name)
       return {}
     }

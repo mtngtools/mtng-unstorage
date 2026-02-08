@@ -17,4 +17,5 @@ import '../drivers/aws-s3/aws-s3-flex.test.js'
 // Future: import '../drivers/aws-dynamodb/aws-dynamodb-flex.test.js'
 // Future: import '../drivers/aws-dynamodb/aws-dynamodb-versioned.test.js'
 import '../drivers/aws-ssm/aws-ssm-base.test.js'
+import '../drivers/aws-ssm/aws-ssm-flex.test.js'
 

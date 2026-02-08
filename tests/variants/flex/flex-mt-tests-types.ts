@@ -12,6 +12,8 @@ export interface FlexVariantTypeTestOptions {
   makeDriver: (opts: any) => Driver
   makeMockClient: () => any
   defaultOptions: any
+  /** Option key for injecting mock client (e.g. 's3Client' or 'ssmClient'). Default 's3Client'. */
+  clientOptionKey?: string
 }
 
 /**
@@ -19,13 +21,13 @@ export interface FlexVariantTypeTestOptions {
  * These tests verify TypeScript compile-time type checking only
  */
 export function flexMtTestsTypes(opts: FlexVariantTypeTestOptions) {
-  const { makeDriver, makeMockClient, defaultOptions } = opts
+  const { makeDriver, makeMockClient, defaultOptions, clientOptionKey = 's3Client' } = opts
 
   describe('flex variant TypeScript types', () => {
     it('TypeScript correctly types flex driver with value mapping', () => {
       const driver = makeDriver({
         ...defaultOptions,
-        s3Client: makeMockClient(),
+        [clientOptionKey]: makeMockClient(),
         toStorageValue: (params) => JSON.stringify(params.input),
         fromStorageValue: (params) => JSON.parse(params.input as string),
       })
@@ -44,7 +46,7 @@ export function flexMtTestsTypes(opts: FlexVariantTypeTestOptions) {
     it('TypeScript correctly infers return types from fromStorageValue', async () => {
       const driver = makeDriver({
         ...defaultOptions,
-        s3Client: makeMockClient(),
+        [clientOptionKey]: makeMockClient(),
         readOnly: true,
         fromStorageValue: (params) => JSON.parse(params.input as string),
       })
@@ -61,7 +63,7 @@ export function flexMtTestsTypes(opts: FlexVariantTypeTestOptions) {
     it('TypeScript correctly types read-only flex driver', () => {
       const driver = makeDriver({
         ...defaultOptions,
-        s3Client: makeMockClient(),
+        [clientOptionKey]: makeMockClient(),
         readOnly: true,
         fromStorageValue: (params) => JSON.parse(params.input as string),
       })

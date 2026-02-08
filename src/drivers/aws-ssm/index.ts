@@ -6,6 +6,7 @@
 
 export { default, default as AwsSsmDriver } from './aws-ssm.js';
 export { default as awsSsmDriver } from './aws-ssm.js';
+export { default as AwsSsmFlexDriver, default as awsSsmFlexDriver } from './aws-ssm-flex.js';
 
 export * from './types.js';
 export * from './shared-public.js';

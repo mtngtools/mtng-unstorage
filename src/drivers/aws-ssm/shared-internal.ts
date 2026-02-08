@@ -2,6 +2,7 @@
  * SSM native driver implementation
  *
  * Implements hasItem, getItem, setItem, removeItem, getKeys, clear using AWS SSM API.
+ * Supports optional key/value mappers for the flex driver; when omitted, uses default key mapping and pass-through values.
  * Internal only; not exported from the driver index.
  */
 
@@ -24,14 +25,35 @@ function withDecryptionForRequest(resolved: ResolvedAWSSSMDriverOptions, opts?: 
   return opts?.withDecryption ?? resolved.withDecryption;
 }
 
+export type SsmNativeDriverMappers = {
+  mapToParamName: (key: string, transactionOptions?: MTSSMDriverTransactionOptions) => string;
+  mapFromParamName: (paramName: string, transactionOptions?: MTSSMDriverTransactionOptions) => string;
+  mapValueToSsm: (value: unknown, transactionOptions?: MTSSMDriverTransactionOptions) => unknown | Promise<unknown>;
+  mapValueFromSsm: (value: string, transactionOptions?: MTSSMDriverTransactionOptions) => unknown | Promise<unknown>;
+};
+
+function defaultMappers(resolvedOptions: ResolvedAWSSSMDriverOptions): SsmNativeDriverMappers {
+  return {
+    mapToParamName: (key, transactionOptions) =>
+      mapUnstorageKeyToSsmParamName({ key, resolvedDriverOptions: resolvedOptions, transactionOptions }),
+    mapFromParamName: (paramName, transactionOptions) =>
+      mapSsmParamNameToUnstorageKey({ key: paramName, resolvedDriverOptions: resolvedOptions, transactionOptions }),
+    mapValueToSsm: (value) => value,
+    mapValueFromSsm: (value) => value,
+  };
+}
+
 export function createSsmNativeDriver(
-  resolvedOptions: ResolvedAWSSSMDriverOptions
+  resolvedOptions: ResolvedAWSSSMDriverOptions,
+  mappers?: SsmNativeDriverMappers
 ) {
   const client = resolvedOptions.ssmClient;
-  const mapToParamName = (key: string, transactionOptions?: MTSSMDriverTransactionOptions) =>
-    mapUnstorageKeyToSsmParamName({ key, resolvedDriverOptions: resolvedOptions, transactionOptions });
-  const mapFromParamName = (paramName: string, transactionOptions?: MTSSMDriverTransactionOptions) =>
-    mapSsmParamNameToUnstorageKey({ key: paramName, resolvedDriverOptions: resolvedOptions, transactionOptions });
+  const {
+    mapToParamName,
+    mapFromParamName,
+    mapValueToSsm,
+    mapValueFromSsm,
+  } = mappers ?? defaultMappers(resolvedOptions);
 
   const hasItem = async (key: string, _opts?: MTSSMDriverTransactionOptions) => {
     try {
@@ -49,8 +71,15 @@ export function createSsmNativeDriver(
     try {
       const Name = mapToParamName(key, _opts);
       const out = await client.send(new GetParameterCommand({ Name, WithDecryption: withDecryptionForRequest(resolvedOptions, _opts) }));
-      const value = out.Parameter?.Value;
-      return (value ?? null) as T | null;
+      const rawValue = out.Parameter?.Value;
+      if (rawValue == null) return null;
+      try {
+        const mapped = await mapValueFromSsm(rawValue, _opts);
+        return (mapped ?? null) as T | null;
+      } catch {
+        // Value mapping errors (e.g. fromStorageValue throws): return null to match S3 flex behavior
+        return null;
+      }
     } catch (err: unknown) {
       const name = (err as { name?: string })?.name;
       const code = (err as { Code?: string })?.Code;
@@ -59,12 +88,14 @@ export function createSsmNativeDriver(
     }
   };
 
-  const setItem = async (key: string, value: string, _opts?: MTSSMDriverTransactionOptions) => {
+  const setItem = async (key: string, value: unknown, _opts?: MTSSMDriverTransactionOptions) => {
     const Name = mapToParamName(key, _opts);
+    const storageValue = await mapValueToSsm(value, _opts);
+    const valueStr = typeof storageValue === 'string' ? storageValue : String(storageValue);
     await client.send(
       new PutParameterCommand({
         Name,
-        Value: value,
+        Value: valueStr,
         Type: 'String',
         Overwrite: true,
       })

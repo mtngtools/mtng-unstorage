@@ -39,3 +39,11 @@ Read operations accept an optional options object. SSM driver supports:
 - **`clear`**: Deletes all parameters under the configured prefix.
     - **Constraint**: Requires `allowClear: true` **AND** a non-empty `storagePrefix` (or `base`).
     - **Safety**: Cannot be run on the root path `/` to prevent accidental deletion of all account parameters.
+
+## Flex variant
+
+The flex driver (`awsSsmFlexDriver`) supports custom key and value mapping per the [Flex types specification](../../types/flex.md): `toStorageKey` / `fromStorageKey`, `toStorageValue` / `fromStorageValue`.
+
+- **Default behavior**: Key mapping is the same as the base driver (unstorage key to SSM parameter path). Value mapping is pass-through (string).
+- **Configuration**: Same as base (region, credentials, ssmClient, withDecryption, storagePrefix, readOnly, allowClear) plus optional mapping functions.
+- **Validation**: If `toStorageValue` is provided, `fromStorageValue` is required unless `readOnly: true`.
