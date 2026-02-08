@@ -14,21 +14,25 @@ export interface BaseVariantTestOptions {
   makeDriver: (opts: any) => Driver
   makeMockClient: () => any
   defaultOptions: any
+  /** Option key used to inject the mock client (e.g. 's3Client', 'ssmClient'). Defaults to 's3Client'. */
+  clientOptionKey?: string
+  /** Backend key to set for the readOnly test (e.g. SSM uses '/test-prefix/key1'). Defaults to 'test-prefix/key1'. */
+  readOnlySeedKey?: string
 }
 
 /**
  * Base variant MT tests - shared across all drivers
  */
 export function baseMtTests(opts: BaseVariantTestOptions) {
-  const { makeDriver, makeMockClient, defaultOptions } = opts
+  const { makeDriver, makeMockClient, defaultOptions, clientOptionKey = 's3Client', readOnlySeedKey = 'test-prefix/key1' } = opts
 
   describe('base variant (readOnly, allowClear)', () => {
     describe('readOnly mode', () => {
       it('allows read operations via storage interface', async () => {
         const mockClient = makeMockClient()
-        mockClient.storage.set('test-prefix/key1', 'value')
+        mockClient.storage.set(readOnlySeedKey, 'value')
         const readOnlyStorage = createStorage()
-        readOnlyStorage.mount('readonly', makeDriver({ ...defaultOptions, s3Client: mockClient, readOnly: true }))
+        readOnlyStorage.mount('readonly', makeDriver({ ...defaultOptions, [clientOptionKey]: mockClient, readOnly: true }))
         expect(await readOnlyStorage.getItem('readonly:key1')).toBe('value')
         expect(await readOnlyStorage.hasItem('readonly:key1')).toBe(true)
         expect(await readOnlyStorage.getKeys('readonly')).toEqual(['readonly:key1'])
@@ -38,7 +42,7 @@ export function baseMtTests(opts: BaseVariantTestOptions) {
     describe('allowClear option', () => {
       it('returns clear when allowClear true via storage interface', async () => {
         const storage = createStorage()
-        storage.mount('data', makeDriver({ ...defaultOptions, s3Client: makeMockClient(), allowClear: true }))
+        storage.mount('data', makeDriver({ ...defaultOptions, [clientOptionKey]: makeMockClient(), allowClear: true }))
         await expect(storage.clear('data')).resolves.toBeUndefined()
       })
     })
@@ -47,7 +51,7 @@ export function baseMtTests(opts: BaseVariantTestOptions) {
       itSkipInE2E('filters keys by maxDepth when using mounted storage', async () => {
         const mockClient = makeMockClient()
         const storage = createStorage()
-        storage.mount('data', makeDriver({ ...defaultOptions, s3Client: mockClient, allowClear: true }))
+        storage.mount('data', makeDriver({ ...defaultOptions, [clientOptionKey]: mockClient, allowClear: true }))
         
         // Set up keys with different depths
         // Note: When using mounted storage, the mount prefix ('data:') adds to the depth

@@ -26,6 +26,11 @@
       "types": "./dist/drivers/aws-s3/index.d.ts",
       "import": "./dist/drivers/aws-s3/index.js",
       "require": "./dist/drivers/aws-s3/index.cjs"
+    },
+    "./drivers/aws-ssm": {
+      "types": "./dist/drivers/aws-ssm/index.d.ts",
+      "import": "./dist/drivers/aws-ssm/index.js",
+      "require": "./dist/drivers/aws-ssm/index.cjs"
     }
   },
   "files": [
@@ -55,6 +60,7 @@
     "unstorage",
     "aws",
     "s3",
+    "ssm",
     "drivers",
     "typescript"
   ],
@@ -70,10 +76,12 @@
   "homepage": "https://github.com/mtngtools/mtng-unstorage#readme",
   "peerDependencies": {
     "@aws-sdk/client-s3": "^3.927.0",
+    "@aws-sdk/client-ssm": "^3.927.0",
     "unstorage": "^1.0.0"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.927.0",
+    "@aws-sdk/client-ssm": "^3.927.0",
     "@types/node": "^20.19.24",
     "@vitest/coverage-v8": "^4.0.8",
     "@vitest/ui": "^4.0.9",

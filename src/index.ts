@@ -40,6 +40,10 @@ export {
   AwsS3Driver,
   AwsS3FlexDriver
 } from './drivers/aws-s3/index.js';
+export {
+  default as awsSsmDriver,
+  AwsSsmDriver
+} from './drivers/aws-ssm/index.js';
 
 // Export driver-specific types for convenience
 export type { 
@@ -47,6 +51,7 @@ export type {
   S3PutObjectOptions,
   AwsS3FlexDriverOptions
 } from './drivers/aws-s3/types/index.js';
+export type { AwsSsmDriverOptions } from './drivers/aws-ssm/types/index.js';
 
 // Export driver helpers for convenience
 export { toS3StorageKey } from './drivers/aws-s3/shared-deprecated.js';
