@@ -19,17 +19,19 @@ export default defineConfig({
         index: 'src/index.ts',
         types: 'src/types/index.ts',
         utils: 'src/utils/index.ts',
-        'drivers/aws-s3/index': 'src/drivers/aws-s3/index.ts'
+        'drivers/aws-s3/index': 'src/drivers/aws-s3/index.ts',
+        'drivers/aws-ssm/index': 'src/drivers/aws-ssm/index.ts'
       },
       name: 'MtngUnstorage',
       formats: ['es', 'cjs']
     },
     rollupOptions: {
-      external: ['@aws-sdk/client-s3', 'unstorage'],
+      external: ['@aws-sdk/client-s3', '@aws-sdk/client-ssm', 'unstorage'],
       output: {
         exports: 'named',
         globals: {
           '@aws-sdk/client-s3': 'AWS_S3',
+          '@aws-sdk/client-ssm': 'AWS_SSM',
           'unstorage': 'Unstorage'
         }
       }

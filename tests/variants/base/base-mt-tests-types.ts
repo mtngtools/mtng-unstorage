@@ -12,6 +12,8 @@ export interface BaseVariantTypeTestOptions {
   makeDriver: (opts: any) => Driver
   makeMockClient: () => any
   defaultOptions: any
+  /** Option key used to inject the mock client (e.g. 's3Client', 'ssmClient'). Defaults to 's3Client'. */
+  clientOptionKey?: string
 }
 
 /**
@@ -19,12 +21,12 @@ export interface BaseVariantTypeTestOptions {
  * These tests verify TypeScript compile-time type checking only
  */
 export function baseMtTestsTypes(opts: BaseVariantTypeTestOptions) {
-  const { makeDriver, makeMockClient, defaultOptions } = opts
+  const { makeDriver, makeMockClient, defaultOptions, clientOptionKey = 's3Client' } = opts
 
   describe('base variant TypeScript types', () => {
     describe('readOnly mode', () => {
       it('TypeScript correctly types read-only driver methods', () => {
-        const driver = makeDriver({ ...defaultOptions, s3Client: makeMockClient(), readOnly: true })
+        const driver = makeDriver({ ...defaultOptions, [clientOptionKey]: makeMockClient(), readOnly: true })
 
         // TypeScript should know these methods exist
         const hasGetItem: typeof driver.getItem = driver.getItem
@@ -53,7 +55,7 @@ export function baseMtTestsTypes(opts: BaseVariantTypeTestOptions) {
     describe('allowClear option', () => {
       it('TypeScript correctly types conditional methods based on options', () => {
         // Test full access driver
-        const fullDriver = makeDriver({ ...defaultOptions, s3Client: makeMockClient(), allowClear: true })
+        const fullDriver = makeDriver({ ...defaultOptions, [clientOptionKey]: makeMockClient(), allowClear: true })
         const hasSetItem: typeof fullDriver.setItem = fullDriver.setItem
         const hasRemoveItem: typeof fullDriver.removeItem = fullDriver.removeItem
         const hasClear: typeof fullDriver.clear = fullDriver.clear
@@ -62,7 +64,7 @@ export function baseMtTestsTypes(opts: BaseVariantTypeTestOptions) {
         expect(hasClear).toBeDefined()
 
         // Test driver without clear
-        const noClearDriver = makeDriver({ ...defaultOptions, s3Client: makeMockClient(), allowClear: false })
+        const noClearDriver = makeDriver({ ...defaultOptions, [clientOptionKey]: makeMockClient(), allowClear: false })
         const hasSetItem2: typeof noClearDriver.setItem = noClearDriver.setItem
         const hasRemoveItem2: typeof noClearDriver.removeItem = noClearDriver.removeItem
 
@@ -77,7 +79,7 @@ export function baseMtTestsTypes(opts: BaseVariantTypeTestOptions) {
       })
 
       it('TypeScript correctly infers getItem return types', async () => {
-        const driver = makeDriver({ ...defaultOptions, s3Client: makeMockClient() })
+        const driver = makeDriver({ ...defaultOptions, [clientOptionKey]: makeMockClient() })
 
         // getItem returns StorageValue (string | number | boolean | null)
         const value = await driver.getItem('test-key')

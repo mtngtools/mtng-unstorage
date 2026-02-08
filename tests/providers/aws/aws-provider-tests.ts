@@ -13,18 +13,20 @@ export interface ProviderTestOptions {
   makeDriver: (opts: any) => Driver
   makeMockClient: () => any
   defaultOptions: any
+  /** Option key used to inject the mock client (e.g. 's3Client', 'ssmClient'). Defaults to 's3Client'. */
+  clientOptionKey?: string
 }
 
 /**
  * AWS provider tests - shared across all AWS drivers
  */
 export function awsProviderTests(opts: ProviderTestOptions) {
-  const { makeDriver, makeMockClient, defaultOptions } = opts
+  const { makeDriver, makeMockClient, defaultOptions, clientOptionKey = 's3Client' } = opts
 
   describe('AWS provider (credentials, region, client)', () => {
     it('creates driver with valid options via storage interface', () => {
       const storage = createStorage()
-      storage.mount('data', makeDriver({ ...defaultOptions, s3Client: makeMockClient() }))
+      storage.mount('data', makeDriver({ ...defaultOptions, [clientOptionKey]: makeMockClient() }))
       expect(storage).toBeDefined()
     })
 
