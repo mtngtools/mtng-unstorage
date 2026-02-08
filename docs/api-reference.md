@@ -14,6 +14,8 @@ The package supports two import strategies:
 import { 
   awsS3Driver,
   awsS3FlexDriver,
+  awsSsmDriver,
+  awsSsmFlexDriver,
   AwsS3DriverOptions,
   validateKey,
   type MTBaseDriverOptions
@@ -49,10 +51,10 @@ import type {
 import { validateKey } from '@mtngtools/unstorage'
 
 // Drivers
-import { awsS3Driver, awsS3FlexDriver } from '@mtngtools/unstorage'
+import { awsS3Driver, awsS3FlexDriver, awsSsmDriver, awsSsmFlexDriver } from '@mtngtools/unstorage'
 
 // Driver-specific types
-import type { AwsS3DriverOptions, S3PutObjectOptions } from '@mtngtools/unstorage'
+import type { AwsS3DriverOptions, S3PutObjectOptions, AwsSsmDriverOptions, AwsSsmFlexDriverOptions } from '@mtngtools/unstorage'
 
 // Driver helpers
 import { toS3StorageKey, normalizeS3Key, joinS3Key } from '@mtngtools/unstorage'
@@ -99,6 +101,18 @@ import {
   toS3StorageKey, // deprecated
   // ... all S3 helpers
 } from '@mtngtools/unstorage/drivers/aws-s3'
+```
+
+### AWS SSM Driver Subpath
+
+```typescript
+// Import SSM driver and types
+import { 
+  awsSsmDriver,
+  awsSsmFlexDriver,
+  type AwsSsmDriverOptions,
+  type AwsSsmFlexDriverOptions
+} from '@mtngtools/unstorage/drivers/aws-ssm'
 ```
 
 **Note:** All of these exports are also available from the main entry (`@mtngtools/unstorage`) for convenience, but using subpaths provides better tree-shaking in production builds.
