@@ -13,13 +13,15 @@ export interface FlexVariantTestOptions {
   makeDriver: (opts: any) => Driver
   makeMockClient: () => any
   defaultOptions: any
+  /** Option key for injecting mock client (e.g. 's3Client' or 'ssmClient'). Default 's3Client'. */
+  clientOptionKey?: string
 }
 
 /**
  * Flex variant MT tests - shared across all drivers
  */
 export function flexMtTests(opts: FlexVariantTestOptions) {
-  const { makeDriver, makeMockClient, defaultOptions } = opts
+  const { makeDriver, makeMockClient, defaultOptions, clientOptionKey = 's3Client' } = opts
 
   describe('flex variant (error handling, validation)', () => {
     describe('error handling with invalid mapping functions', () => {
@@ -27,7 +29,7 @@ export function flexMtTests(opts: FlexVariantTestOptions) {
         const storage = createStorage()
         storage.mount('error', makeDriver({
           ...defaultOptions,
-          s3Client: makeMockClient(),
+          [clientOptionKey]: makeMockClient(),
           toStorageKey: () => { throw new Error('Key mapping failed') },
           fromStorageKey: (params) => params.key,
         }))
@@ -40,7 +42,7 @@ export function flexMtTests(opts: FlexVariantTestOptions) {
         const storage = createStorage()
         storage.mount('error', makeDriver({
           ...defaultOptions,
-          s3Client: mockClient,
+          [clientOptionKey]: mockClient,
           toStorageKey: (params) => params.key,
           fromStorageKey: () => { throw new Error('Key unmapping failed') },
         }))
@@ -66,7 +68,7 @@ export function flexMtTests(opts: FlexVariantTestOptions) {
         const storage = createStorage()
         storage.mount('error', makeDriver({
           ...defaultOptions,
-          s3Client: makeMockClient(),
+          [clientOptionKey]: makeMockClient(),
           toStorageValue: () => { throw new Error('Value mapping failed') },
           fromStorageValue: (params) => JSON.parse(params.input as string),
         }))
@@ -78,7 +80,7 @@ export function flexMtTests(opts: FlexVariantTestOptions) {
         const storage = createStorage()
         storage.mount('error', makeDriver({
           ...defaultOptions,
-          s3Client: makeMockClient(),
+          [clientOptionKey]: makeMockClient(),
           toStorageValue: (params) => JSON.stringify(params.input),
           fromStorageValue: () => { throw new Error('Value unmapping failed') },
         }))

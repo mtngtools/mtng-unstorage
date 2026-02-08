@@ -27,4 +27,6 @@ import '../utils/common-storage.test.js'
 // Future: import '../drivers/aws-dynamodb/aws-dynamodb-versioned.test.js'
 import '../drivers/aws-ssm/aws-ssm-base.test.js'
 import '../drivers/aws-ssm/aws-ssm-base-types.test.js'
+import '../drivers/aws-ssm/aws-ssm-flex.test.js'
+import '../drivers/aws-ssm/aws-ssm-flex-types.test.js'
 
