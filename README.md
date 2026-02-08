@@ -10,11 +10,12 @@ A TypeScript library providing storage drivers for [unstorage](https://github.co
 
 - **[AWS S3 Driver](./docs/drivers/aws-s3.md)** – AWS S3 storage using the [AWS SDK for JavaScript](https://github.com/aws/aws-sdk-js-v3).
 - **[AWS S3 Flex Driver](./docs/drivers/aws-s3.md#flex-driver-custom-mapping)** – Adds custom key and value mapping hooks on top of the S3 driver.
+- **[AWS SSM Driver](./docs/drivers/aws-ssm.md)** – AWS Systems Manager Parameter Store using the [AWS SDK for JavaScript](https://github.com/aws/aws-sdk-js-v3).
+- **[AWS SSM Flex Driver](./docs/drivers/aws-ssm.md#flex-driver-custom-mapping)** – Adds custom key and value mapping hooks on top of the SSM driver.
 
 ### Planned Drivers
 
 - AWS DynamoDB Driver
-- AWS Systems Manager Parameter Store
 
 ### Planned Driver Features
 
@@ -44,12 +45,13 @@ The package supports two import strategies:
 
 **1. Convenience imports (from root)** - Everything available in one import:
 ```typescript
-import { awsS3Driver, AwsS3DriverOptions, validateKey } from '@mtngtools/unstorage'
+import { awsS3Driver, awsSsmDriver, AwsS3DriverOptions, validateKey } from '@mtngtools/unstorage'
 ```
 
 **2. Granular imports (from subpaths)** - Better tree-shaking, recommended for production:
 ```typescript
 import { awsS3Driver } from '@mtngtools/unstorage/drivers/aws-s3'
+import { awsSsmDriver } from '@mtngtools/unstorage/drivers/aws-ssm'
 import { validateKey } from '@mtngtools/unstorage/utils'
 import type { MTBaseDriverOptions } from '@mtngtools/unstorage/types'
 ```
@@ -164,12 +166,52 @@ Type rules:
 - If `fromStorageKey` is provided, either also provide `toStorageKey` or set `readOnly: true`.
 - If `fromStorageValue` is provided, either also provide `toStorageValue` or set `readOnly: true`.
 
+### AWS SSM Driver
+
+AWS Systems Manager Parameter Store driver. Keys map to parameter paths (e.g. `/my-app/key1`).
+
+```bash
+pnpm install @mtngtools/unstorage @aws-sdk/client-ssm unstorage
+```
+
+**Convenience import (from root):**
+```typescript
+import { createStorage } from 'unstorage'
+import { awsSsmDriver } from '@mtngtools/unstorage'
+
+const storage = createStorage({
+  driver: awsSsmDriver({
+    region: 'us-east-1',
+    storagePrefix: 'my-app',
+  })
+})
+await storage.setItem('config:feature-x', 'true')
+const value = await storage.getItem('config:feature-x')
+```
+
+**Granular import (from subpath - recommended for production):**
+```typescript
+import { awsSsmDriver } from '@mtngtools/unstorage/drivers/aws-ssm'
+```
+
+You can pass a pre-constructed `ssmClient` or omit it and provide `region` (and optionally credentials). Use `withDecryption: true` (default) to decrypt SecureString parameters when reading.
+
+### AWS SSM Flex: custom key and value mapping
+
+The flex variant adds custom key and value mapping for Parameter Store, similar to S3 Flex.
+
+**Convenience import:** `import { awsSsmFlexDriver } from '@mtngtools/unstorage'`  
+**Granular import:** `import { awsSsmFlexDriver } from '@mtngtools/unstorage/drivers/aws-ssm'`
+
+See [AWS SSM Driver](./docs/drivers/aws-ssm.md#flex-driver-custom-mapping) for options and examples.
+
 ## Documentation
 
 ### Driver Documentation
 
 - **[All Drivers Overview](./docs/drivers/README.md)** - Comparison and overview of all drivers
 - **[AWS S3 Driver](./docs/drivers/aws-s3.md)** - Complete AWS S3 driver documentation
+- **[AWS SSM Driver](./docs/drivers/aws-ssm.md)** - Complete AWS SSM Parameter Store driver documentation
 - **[API Reference](./docs/api-reference.md)** - Package exports and types
 
 ### Agent guidance
@@ -229,6 +271,18 @@ Environment file load order (highest wins):
 Security:
 - Never commit credentials
 - Use a unique prefix (`AWS_S3_TEST_PREFIX`) to isolate and simplify cleanup
+
+### E2E Setup (SSM)
+E2E tests for the SSM driver are gated. Enable and configure via environment:
+
+```bash
+# In .env.test.e2e.local or env vars
+AWS_SSM_E2E_ENABLED=true
+AWS_SSM_TEST_PREFIX=/test/mtng-unstorage/e2e
+# AWS_REGION=us-east-1  # optional, uses default config
+```
+
+Use a dedicated test prefix to isolate and simplify cleanup. AWS credentials follow the same chain as S3 (CLI config, env vars, IAM roles).
 
 ## License
 
