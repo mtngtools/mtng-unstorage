@@ -3,6 +3,11 @@
 ## Overview
 The AWS DynamoDB driver enables using Amazon DynamoDB as a key-value storage backend.
 
+### Driver Variants
+- **`awsDdbDriver`**: Base driver with standard key-value operations.
+- **`awsDdbFlexDriver`**: (Planned) Flex driver with custom key/value mapping support.
+- **`awsDdbVersionedDriver`**: (Planned) Versioned driver with item history support.
+
 ## Configuration
 
 ### Query Strategy & Key Mapping
@@ -20,6 +25,8 @@ The driver supports the following 5 strategies, mapping to DynamoDB's core acces
 
 > [!NOTE]
 > Strategies 3, 4, and 5 access Secondary Indexes which are inherently Read-Only in DynamoDB. Write operations (`setItem`, `removeItem`, `clear`) using these strategies will throw an error or be disabled if `readOnly: true` is enforced.
+>
+> **Index Projection Requirement**: For Index strategies to work, the Partition Key, Sort Key (if applicable), and the Value attribute (`value` or all attributes if `returnFullObject` is used) **must** be projected into the index (e.g., `INCLUDE` or `ALL`).
 
 
 #### Key Mapping Logic
@@ -150,8 +157,16 @@ The driver expects a table with a primary key (partition key) to store the item 
 ### Operations
 - **`setItem`**: Puts an item into the table (`PutItem`).
 - **`getItem`**: Gets an item from the table (`GetItem`).
+- **`getItems`**: (Strategies with SK) Gets multiple items via `Query` with filter expression support.
 - **`removeItem`**: Deletes an item (`DeleteItem`).
-- **`getKeys`**: Scans table for keys (Note: Scan operations can be expensive).
+- **`getKeys`**: Lists keys using `Query` (for strategies with Sort Key) or `Scan` (for PK-only strategies).
+- **`clear`**: Deletes all items under the configured prefix.
+    - **Constraint**: Requires `allowClear: true` **AND** a non-empty `partitionKeyValue`, `storagePrefix`, or `base`.
+    - **Safety**: For strategies with Sort Key, cannot be run without a defined Partition Key to prevent accidental deletion.
+
+### TTL Support
+> [!NOTE]
+> TTL (Time-To-Live) support is planned for a future release.
 
 ### Testing Considerations
 
@@ -165,6 +180,7 @@ Testing the `aws-ddb` driver requires special handling due to the nature of Dyna
     - Standard `unstorage` tests expect a driver to be able to write and then read back data.
     - specialized tests for Index strategies must use a **separate "Writer" driver instance** (configured with Strategy 1 or 2) to populate the table.
     - The "Reader" driver (configured with the Index strategy) is then used to verify that the data can be retrieved correctly via the index.
+    - **GSI Latency**: Since Global Secondary Indexes are eventually consistent, the "Reader" test suite must account for propagation delays (e.g., via retries or polling) when verifying writes.
 
 > [!IMPORTANT]
 > **Testing Complexity**: Unlike other drivers that implement the base test suite once, the `aws-ddb` driver must run the suite **11 times** to validate all access patterns and Partition Key resolution paths.
@@ -173,6 +189,7 @@ Testing the `aws-ddb` driver requires special handling due to the nature of Dyna
 > 1.  **Strategies with Sort Key (9 Tests)**:
 >     - Strategies: `table_pk_sk`, `lsi`, `gsi_pk_sk` (3 strategies).
 >     - PK Resolution Paths: Driver Option, Storage Prefix, Transaction Option (3 paths).
+>       - When testing PK passed in the Transaction Option, an alternate method for clearing at the end of the test may be required, since the default clear method relies on a non-empty `partitionKeyValue`, `storagePrefix`, or `base`.
 >     - Calculation: 3 Strategies * 3 Paths = **9 Tests**.
 > 2.  **Strategies without Sort Key (2 Tests)**:
 >     - Strategies: `table_pk`, `gsi_pk` (2 strategies).
@@ -183,6 +200,9 @@ Testing the `aws-ddb` driver requires special handling due to the nature of Dyna
 ### Test Configuration (Environment Variables)
 
 To facilitate testing across all 5 strategies, the following environment variables are required. These ensure that the test runner can target the correct tables and indexes with the appropriate key configurations.
+
+#### General
+- `AWS_DDB_E2E_ENABLED`: Set to `true` to run DynamoDB E2E tests.
 
 #### Table Names
 - `AWS_DDB_TABLE_PK_SK`: Table with Partition Key and Sort Key (supports strategies 2, 3, 5).
@@ -198,6 +218,9 @@ To facilitate testing across all 5 strategies, the following environment variabl
 - `AWS_DDB_LSK_NAME`: Sort Key name for LSI (default: `lsk`).
 - `AWS_DDB_GPK_NAME`: Partition Key name for GSI (default: `gpk`).
 - `AWS_DDB_GSK_NAME`: Sort Key name for GSI (default: `gsk`).
+
+#### Other (Optional)
+- `AWS_DDB_PROPAGATION_DELAY`: Time in milliseconds to wait for GSI propagation during tests (default: `1000`).
 
 ## Implementation Preference
 
