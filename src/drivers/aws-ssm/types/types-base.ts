@@ -33,12 +33,16 @@ export type MTSSMDriverTransactionOptions = MTBaseDriverTransactionOptions & {
   withDecryption?: boolean;
 };
 
+export type PartialMTSSMDriverTransactionOptions = Partial<MTSSMDriverTransactionOptions>;
+
 export type SharedAwsSsmDriverOptions = SharedAwsSsmDriverOptionsBase & AwsRegionAndCredentials;
 
 /**
  * User-facing driver options
  */
 export type AwsSsmDriverOptions = Prettify<MTBaseDriverOptions & SharedAwsSsmDriverOptions>;
+
+export type PartialAwsSsmDriverOptions = Partial<AwsSsmDriverOptions>;
 
 /**
  * Resolved options (defaults applied)

@@ -41,6 +41,8 @@ export type AwsSsmFlexDriverOptions<
   >
 >;
 
+export type PartialAwsSsmFlexDriverOptions = Partial<AwsSsmFlexDriverOptions>;
+
 /**
  * Resolved flex driver options for AWS SSM.
  */

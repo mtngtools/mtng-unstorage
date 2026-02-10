@@ -46,6 +46,10 @@ export {
   awsSsmFlexDriver,
   AwsSsmFlexDriver
 } from './drivers/aws-ssm/index.js';
+export {
+  default as awsDdbDriver,
+  AwsDdbDriver
+} from './drivers/aws-ddb/index.js';
 
 // Export driver-specific types for convenience
 export type { 
@@ -54,6 +58,7 @@ export type {
   AwsS3FlexDriverOptions
 } from './drivers/aws-s3/types/index.js';
 export type { AwsSsmDriverOptions, AwsSsmFlexDriverOptions } from './drivers/aws-ssm/types/index.js';
+export type { AWSDDbDriverOptions } from './drivers/aws-ddb/types/index.js';
 
 // Export driver helpers for convenience
 export { toS3StorageKey } from './drivers/aws-s3/shared-deprecated.js';

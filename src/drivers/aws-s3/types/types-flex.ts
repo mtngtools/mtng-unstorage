@@ -39,6 +39,8 @@ export type AwsS3FlexDriverOptions<
     TDriverTransOptions>
 >;
 
+export type PartialAwsS3FlexDriverOptions = Partial<AwsS3FlexDriverOptions>;
+
 /**
  * Resolved flex driver options for AWS S3.
  * Combines ResolvedMTFlexDriverOptions with S3-specific shared options.

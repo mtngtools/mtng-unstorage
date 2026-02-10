@@ -31,6 +31,11 @@
       "types": "./dist/drivers/aws-ssm/index.d.ts",
       "import": "./dist/drivers/aws-ssm/index.js",
       "require": "./dist/drivers/aws-ssm/index.cjs"
+    },
+    "./drivers/aws-ddb": {
+      "types": "./dist/drivers/aws-ddb/index.d.ts",
+      "import": "./dist/drivers/aws-ddb/index.js",
+      "require": "./dist/drivers/aws-ddb/index.cjs"
     }
   },
   "files": [
@@ -51,8 +56,8 @@
     "test:coverage": "vitest run --coverage",
     "test:typecheck": "tsc --noEmit --skipLibCheck tests/**/*.ts",
     "typecheck": "tsc --noEmit",
-  "lint": "oxlint src",
-  "lint:fix": "oxlint src --fix",
+    "lint": "oxlint src",
+    "lint:fix": "oxlint src --fix",
     "prepublishOnly": "pnpm run typecheck && pnpm run test:typecheck && pnpm run lint && pnpm run build && pnpm run test"
   },
   "keywords": [
@@ -77,7 +82,9 @@
   "peerDependencies": {
     "@aws-sdk/client-s3": "^3.927.0",
     "@aws-sdk/client-ssm": "^3.927.0",
-    "unstorage": "^1.0.0"
+    "unstorage": "^1.0.0",
+    "@aws-sdk/client-dynamodb": "^3.927.0",
+    "@aws-sdk/lib-dynamodb": "^3.927.0"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.927.0",
@@ -91,7 +98,9 @@
     "unstorage": "^1.17.2",
     "vite": "npm:rolldown-vite@7.2.2",
     "vite-plugin-dts": "^4.5.4",
-    "vitest": "^4.0.9"
+    "vitest": "^4.0.9",
+    "@aws-sdk/client-dynamodb": "^3.927.0",
+    "@aws-sdk/lib-dynamodb": "^3.927.0"
   },
   "engines": {
     "node": ">=20.19.0"
