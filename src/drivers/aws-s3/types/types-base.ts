@@ -50,6 +50,8 @@ export type S3PutObjectOptions = Prettify<Omit<PutObjectCommandInput, 'Bucket' |
  */
 export type AwsS3DriverOptions = Prettify<MTBaseDriverOptions & SharedAwsS3DriverOptions>;
 
+export type PartialAwsS3DriverOptions = Partial<AwsS3DriverOptions>;
+
 export type ResolvedAwsS3DriverOptions = Prettify<ResolvedMTBaseDriverOptions & SharedAwsS3DriverOptions>;
 
 /**

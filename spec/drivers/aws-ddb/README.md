@@ -24,9 +24,17 @@ The driver supports the following 5 strategies, mapping to DynamoDB's core acces
 5.  **Global Secondary Index (GSI - PK + SK)**: Access via GSI using GSI PK and GSI SK. (**Read-Only**)
 
 > [!NOTE]
-> Strategies 3, 4, and 5 access Secondary Indexes which are inherently Read-Only in DynamoDB. Write operations (`setItem`, `removeItem`, `clear`) using these strategies will throw an error or be disabled if `readOnly: true` is enforced.
+> Strategies 3, 4, and 5 access Secondary Indexes which are inherently Read-Only in DynamoDB. For these strategies the driver **resolves as read-only**: write operations (`setItem`, `removeItem`, `clear`) are not available.
 >
 > **Index Projection Requirement**: For Index strategies to work, the Partition Key, Sort Key (if applicable), and the Value attribute (`value` or all attributes if `returnFullObject` is used) **must** be projected into the index (e.g., `INCLUDE` or `ALL`).
+
+#### Resolved options (index strategies)
+
+When creating **resolved driver options** at driver instantiation:
+
+- If `strategy` is `lsi`, `gsi_pk`, or `gsi_pk_sk`, then `readOnly` **must** be set to `true` in the resolved options, **regardless** of the value passed in the user-supplied driver options.
+
+This makes the driver read-only whenever it is using an index; no write methods are exposed and no runtime throw is needed for writes.
 
 
 #### Key Mapping Logic
@@ -34,15 +42,16 @@ The driver supports the following 5 strategies, mapping to DynamoDB's core acces
 The driver maps the `unstorage` `key` argument to DynamoDB keys based on the selected strategy.
 
 **Strategies involving Sort Keys (Triggered by strategies 2, 3, 5)**
-When a Sort Key is involved, the `unstorage` `key` is treated as the **Sort Key**. The **Partition Key** is resolved from the following sources, in order of precedence:
+When a Sort Key is involved, the `unstorage` `key` is treated as the **Sort Key**. The **Partition Key** is resolved only from explicit `partitionKeyValue`, in order of precedence:
 
-1.  **Driver Option (`partitionKeyValue`)**: A static PK value defined at driver initialization.
-2.  **Storage Prefix (`storagePrefix`)**: If no driver option is set, the `storagePrefix` (if present) is used as the PK value.
-3.  **Transaction Option (`partitionKeyValue`)**: If neither of the above are set, the PK value must be provided in the transaction options.
+1.  **Transaction Option (`partitionKeyValue`)**: Per-request PK value.
+2.  **Driver Option (`partitionKeyValue`)**: Static PK value defined at driver initialization.
+
+`storagePrefix` and `base` are **not** used for partition key value; they only affect PK-only strategies (see below) and key prefixing.
 
 **Strategies NOT involving Sort Keys (Triggered by strategies 1, 4)**
 When no Sort Key is involved, the `unstorage` `key` is treated as the **Partition Key**.
-- Standard `unstorage` behavior applies: `storagePrefix` and `base` are prepended to the `key` to form the final Partition Key.
+- Standard `unstorage` behavior applies: the effective key is the concat **storagePrefix + base + key** (same order as aws-s3), forming the final Partition Key value.
 
 ### Configuration
 
@@ -66,7 +75,7 @@ The driver options are typed as a discriminated union based on the `strategy` fi
 **Default Strategy**: `table_pk_sk` (if `strategy` is omitted).
 
 #### Strategies with Sort Key (Requires Partition Key)
-These strategies treat the `unstorage` `key` as the Sort Key. The Partition Key must be defined via `partitionKey` option, `storagePrefix`, or transaction options.
+These strategies treat the `unstorage` `key` as the Sort Key. The Partition Key must be defined via `partitionKeyValue` (driver or transaction options only; `storagePrefix` and `base` are not used for PK value).
 
 **Common Options**:
 | Option | Type | Required | Description |
@@ -132,20 +141,23 @@ type PartitionKeyStrategyOptions = {
 #### Union Type
 The full driver options type is the union of these strategies:
 ```typescript
-type AwsDdbDriverOptions = AwsGeneralOptions & (SortKeyStrategyOptions | PartitionKeyStrategyOptions);
+type AWSDDbDriverOptions = AwsGeneralOptions & (SortKeyStrategyOptions | PartitionKeyStrategyOptions);
 ```
 
 ### Transaction Options
 
-The driver supports the following transaction options, which can be passed to operations like `setItem`, `getItem`, etc.
+The driver supports the following transaction options, which can be passed to operations like `setItem`, `getItem`, `getItems`, etc.
 
 | Option | Type | Description |
 | :--- | :--- | :--- |
-| `partitionKeyValue` | `string` | **Required** if not set in Driver Options or via `storagePrefix` (for strategies involving Sort Keys). Overrides potentially ambiguous PK resolution. |
+| `partitionKeyValue` | `string` | **Required** if not set in Driver Options (for strategies involving Sort Keys). Overrides with per-request PK when provided in transaction options. |
 | `consistentRead` | `boolean` | If set, overrides the driver-level `consistentRead` setting. |
+| `returnStartsWithKey` | `boolean` | For `getItems` only. Default `false`. When `true`, the driver treats the request as a **prefix match**: the caller supplies a single key (prefix), and the driver uses a `Query` with a key condition (e.g. `begins_with` on the sort key, or on the partition key for PK-only strategies) to return all items whose key starts with that prefix. More efficient than listing then fetching when the intent is "everything under this prefix." Ignored when `getItems` is called with multiple keys. |
 
 
 ## Behavior
+
+For index strategies (`lsi`, `gsi_pk`, `gsi_pk_sk`), resolved options have `readOnly` set to `true`.
 
 ### Table Schema
 The driver expects a table with a primary key (partition key) to store the item key.
@@ -157,12 +169,14 @@ The driver expects a table with a primary key (partition key) to store the item 
 ### Operations
 - **`setItem`**: Puts an item into the table (`PutItem`).
 - **`getItem`**: Gets an item from the table (`GetItem`).
-- **`getItems`**: (Strategies with SK) Gets multiple items via `Query` with filter expression support.
+- **`getItems`**: Gets multiple items. Two modes:
+    - **Default (multiple keys or option off)**: Uses `BatchGetItem` to fetch the requested keys by full primary key (e.g. up to 100 keys per request). Works for all strategies.
+    - **Prefix mode** (transaction option `returnStartsWithKey: true` and a **single** key): Uses a single `Query` with a key condition (e.g. `begins_with` on sort key for Sort Key strategies, or `begins_with` on partition key for PK-only strategies) to return all items whose key starts with the given prefix. More efficient when the intent is "everything under this prefix." When multiple keys are passed, `returnStartsWithKey` is ignored and BatchGetItem behavior is used.
 - **`removeItem`**: Deletes an item (`DeleteItem`).
 - **`getKeys`**: Lists keys using `Query` (for strategies with Sort Key) or `Scan` (for PK-only strategies).
 - **`clear`**: Deletes all items under the configured prefix.
-    - **Constraint**: Requires `allowClear: true` **AND** a non-empty `partitionKeyValue`, `storagePrefix`, or `base`.
-    - **Safety**: For strategies with Sort Key, cannot be run without a defined Partition Key to prevent accidental deletion.
+    - **Constraint**: Requires `allowClear: true` **AND** either a non-empty `partitionKeyValue` (for sort-key strategies) or a non-empty `base`/`storagePrefix` (for PK-only strategies, to scope which partition keys to delete).
+    - **Safety**: For strategies with Sort Key, cannot be run without an explicit `partitionKeyValue` to prevent accidental deletion.
 
 ### TTL Support
 > [!NOTE]
@@ -183,14 +197,14 @@ Testing the `aws-ddb` driver requires special handling due to the nature of Dyna
     - **GSI Latency**: Since Global Secondary Indexes are eventually consistent, the "Reader" test suite must account for propagation delays (e.g., via retries or polling) when verifying writes.
 
 > [!IMPORTANT]
-> **Testing Complexity**: Unlike other drivers that implement the base test suite once, the `aws-ddb` driver must run the suite **11 times** to validate all access patterns and Partition Key resolution paths.
+> **Testing Complexity**: Unlike other drivers that implement the base test suite once, the `aws-ddb` driver must run the suite **8 times** to validate all access patterns and Partition Key resolution paths.
 >
-> **Breakdown of Test Scenarios (11 Total)**:
-> 1.  **Strategies with Sort Key (9 Tests)**:
+> **Breakdown of Test Scenarios (8 Total)**:
+> 1.  **Strategies with Sort Key (6 Tests)**:
 >     - Strategies: `table_pk_sk`, `lsi`, `gsi_pk_sk` (3 strategies).
->     - PK Resolution Paths: Driver Option, Storage Prefix, Transaction Option (3 paths).
->       - When testing PK passed in the Transaction Option, an alternate method for clearing at the end of the test may be required, since the default clear method relies on a non-empty `partitionKeyValue`, `storagePrefix`, or `base`.
->     - Calculation: 3 Strategies * 3 Paths = **9 Tests**.
+>     - PK Resolution Paths: Driver Option (`partitionKeyValue`), Transaction Option (`partitionKeyValue`) only (2 paths). `storagePrefix` and `base` are not used for partition key value.
+>       - When testing PK via Transaction Option, an alternate method for clearing may be required, since clear requires a non-empty `partitionKeyValue` (driver or transaction).
+>     - Calculation: 3 Strategies * 2 Paths = **6 Tests**.
 > 2.  **Strategies without Sort Key (2 Tests)**:
 >     - Strategies: `table_pk`, `gsi_pk` (2 strategies).
 >     - PK Resolution Path: Standard `unstorage` behavior (1 path).

@@ -20,18 +20,21 @@ export default defineConfig({
         types: 'src/types/index.ts',
         utils: 'src/utils/index.ts',
         'drivers/aws-s3/index': 'src/drivers/aws-s3/index.ts',
-        'drivers/aws-ssm/index': 'src/drivers/aws-ssm/index.ts'
+        'drivers/aws-ssm/index': 'src/drivers/aws-ssm/index.ts',
+        'drivers/aws-ddb/index': 'src/drivers/aws-ddb/index.ts'
       },
       name: 'MtngUnstorage',
       formats: ['es', 'cjs']
     },
     rollupOptions: {
-      external: ['@aws-sdk/client-s3', '@aws-sdk/client-ssm', 'unstorage'],
+      external: ['@aws-sdk/client-dynamodb', '@aws-sdk/client-s3', '@aws-sdk/client-ssm', '@aws-sdk/lib-dynamodb', 'unstorage'],
       output: {
         exports: 'named',
         globals: {
+          '@aws-sdk/client-dynamodb': 'AWS_DynamoDB',
           '@aws-sdk/client-s3': 'AWS_S3',
           '@aws-sdk/client-ssm': 'AWS_SSM',
+          '@aws-sdk/lib-dynamodb': 'AWS_LibDynamoDB',
           'unstorage': 'Unstorage'
         }
       }

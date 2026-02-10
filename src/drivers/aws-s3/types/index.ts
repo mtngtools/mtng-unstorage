@@ -10,6 +10,7 @@ export type {
   SharedAwsS3DriverOptions,
   S3PutObjectOptions,
   AwsS3DriverOptions,
+  PartialAwsS3DriverOptions,
   ResolvedAwsS3DriverOptions,
   ResolvedAWSS3DriverOptions,
   ValidatedAWSS3DriverOptions,
@@ -25,6 +26,7 @@ export {
 // Flex variant types
 export type {
   AwsS3FlexDriverOptions,
+  PartialAwsS3FlexDriverOptions,
   ResolvedAwsS3FlexDriverOptions
 } from './types-flex.js';
 
