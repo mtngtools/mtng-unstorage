@@ -11,17 +11,17 @@
  */
 
 import { defineDriver } from 'unstorage';
-import type { AWSDDbDriverOptions } from './types.js';
-import { validateDdbOptions } from './shared-public.js';
-import { createDdbNativeDriver } from './shared-internal.js';
-import { AWS_DDB_DRIVER_NAME } from './types.js';
+import type { AwsDynamoDBDriverOptions } from './types.js';
+import { validateDynamoDBOptions } from './shared-public.js';
+import { createDynamoDBNativeDriver } from './shared-internal.js';
+import { AWS_DYNAMODB_DRIVER_NAME } from './types.js';
 import type { ConditionalDriver, DriverFactory } from '../../types.js';
 
-const awsDdbDriver: DriverFactory<AWSDDbDriverOptions, never> = defineDriver(
-  (options: AWSDDbDriverOptions): ConditionalDriver<typeof options> => {
-    const resolvedDriverOptions = validateDdbOptions({
+const awsDynamoDBDriver: DriverFactory<AwsDynamoDBDriverOptions, never> = defineDriver(
+  (options: AwsDynamoDBDriverOptions): ConditionalDriver<typeof options> => {
+    const resolvedDriverOptions = validateDynamoDBOptions({
       ...options,
-      name: options.name ?? AWS_DDB_DRIVER_NAME,
+      name: options.name ?? AWS_DYNAMODB_DRIVER_NAME,
       storagePrefix: options.storagePrefix ?? '',
       base: options.base ?? '',
     });
@@ -36,7 +36,7 @@ const awsDdbDriver: DriverFactory<AWSDDbDriverOptions, never> = defineDriver(
       removeItem,
       getKeys,
       clear,
-    } = createDdbNativeDriver(resolvedDriverOptions);
+    } = createDynamoDBNativeDriver(resolvedDriverOptions);
 
     const driver = {
       name,
@@ -60,4 +60,4 @@ const awsDdbDriver: DriverFactory<AWSDDbDriverOptions, never> = defineDriver(
   }
 );
 
-export default awsDdbDriver;
+export default awsDynamoDBDriver;

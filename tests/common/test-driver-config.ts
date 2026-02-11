@@ -1,6 +1,6 @@
 import { createStorage, Driver, Storage } from "unstorage";
 import { AnyPartialDriverOptions, AnyPartialTransactionOptions } from "../../src/drivers/types";
-import awsDdbDriver from "../../src/drivers/aws-ddb/aws-ddb";
+
 
 export type Scenario = {
   name: string;

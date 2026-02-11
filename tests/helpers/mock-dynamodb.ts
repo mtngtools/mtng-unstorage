@@ -1,6 +1,6 @@
 /**
  * In-memory mock for DynamoDB DocumentClient.send().
- * Used by aws-ddb driver integration tests. Stores items by table and primary key.
+ * Used by aws-dynamodb driver integration tests. Stores items by table and primary key.
  * Supports GetCommand, PutCommand, DeleteCommand, QueryCommand, ScanCommand,
  * BatchGetCommand, and BatchWriteCommand.
  */

@@ -21,7 +21,7 @@ export default defineConfig({
         utils: 'src/utils/index.ts',
         'drivers/aws-s3/index': 'src/drivers/aws-s3/index.ts',
         'drivers/aws-ssm/index': 'src/drivers/aws-ssm/index.ts',
-        'drivers/aws-ddb/index': 'src/drivers/aws-ddb/index.ts'
+        'drivers/aws-dynamodb/index': 'src/drivers/aws-dynamodb/index.ts'
       },
       name: 'MtngUnstorage',
       formats: ['es', 'cjs']

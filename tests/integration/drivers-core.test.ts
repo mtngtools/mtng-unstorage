@@ -14,13 +14,13 @@ import { MockS3Client } from '../../tests/helpers/mock-s3.js'
 // import { versionedTests } from '../variants/versioned/versioned-tests.js'
 import { DriverTestConfigWithOptions } from '../common/test-driver-config.js'
 import { flexCoreTests } from '../variants/flex/flex-core-tests.js'
-import { awsDdbDriverTestConfigWithOptions, TABLE_PK_SK } from '../drivers/aws-ddb/aws-ddb-test-config.js'
+import { awsDynamoDBDriverTestConfigWithOptions } from '../drivers/aws-dynamodb/aws-dynamodb-test-config.js'
 import { awsS3DriverTestConfig, awsS3DriverTestConfigWithOptions } from '../drivers/aws-s3/aws-s3-test-config.js'
 
 // Define all drivers
 const drivers: DriverTestConfigWithOptions[] = [
   awsS3DriverTestConfigWithOptions,
-  awsDdbDriverTestConfigWithOptions,
+  awsDynamoDBDriverTestConfigWithOptions,
 ]
 
 
