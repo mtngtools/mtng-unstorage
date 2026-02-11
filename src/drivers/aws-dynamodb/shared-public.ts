@@ -8,14 +8,14 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { validateKey, validateBaseDriverOptions, validateAWSRegionAndCredentials } from '../../utils.js';
 import type {
-  AWSDDbDriverOptions,
-  ResolvedAWSDDbDriverOptions,
-  ResolvedAWSDDbStrategy,
-  MTDdbDriverTransactionOptions,
+  AwsDynamoDBDriverOptions,
+  ResolvedAwsDynamoDBDriverOptions,
+  ResolvedAwsDynamoDBStrategy,
+  AwsDynamoDBDriverTransactionOptions,
 } from './types.js';
 import { hasSortKey, isIndexStrategy } from './types.js';
 
-function resolveStrategy(opts: AWSDDbDriverOptions): ResolvedAWSDDbStrategy {
+function resolveStrategy(opts: AwsDynamoDBDriverOptions): ResolvedAwsDynamoDBStrategy {
   const s = opts.strategy;
   if (s === 'table_pk' || s === 'gsi_pk' || s === 'lsi' || s === 'gsi_pk_sk') return s;
   return 'table_pk_sk';
@@ -26,9 +26,9 @@ function resolveStrategy(opts: AWSDDbDriverOptions): ResolvedAWSDDbStrategy {
  * Only explicit partitionKeyValue is used (driver or transaction); storagePrefix and base are not used.
  */
 export function resolvePartitionKey(
-  resolved: ResolvedAWSDDbDriverOptions,
+  resolved: ResolvedAwsDynamoDBDriverOptions,
   _key: string,
-  transactionOptions?: MTDdbDriverTransactionOptions
+  transactionOptions?: AwsDynamoDBDriverTransactionOptions
 ): string | undefined {
   if (transactionOptions?.partitionKeyValue !== undefined && transactionOptions.partitionKeyValue !== '') {
     return transactionOptions.partitionKeyValue;
@@ -45,9 +45,9 @@ export function resolvePartitionKey(
  * For PK-only: { [partitionKeyName]: fullBasePrefix + key }.
  */
 export function buildDynamoKey(
-  resolved: ResolvedAWSDDbDriverOptions,
+  resolved: ResolvedAwsDynamoDBDriverOptions,
   key: string,
-  transactionOptions?: MTDdbDriverTransactionOptions
+  transactionOptions?: AwsDynamoDBDriverTransactionOptions
 ): Record<string, string> {
   validateKey(key);
   const pkName = resolved.partitionKeyName;
@@ -74,9 +74,9 @@ export function buildDynamoKey(
  * Uses transactionOptions.partitionKeyValue when resolved.partitionKeyValue is not set.
  */
 export function getKeysContext(
-  resolved: ResolvedAWSDDbDriverOptions,
+  resolved: ResolvedAwsDynamoDBDriverOptions,
   basePrefix?: string,
-  transactionOptions?: MTDdbDriverTransactionOptions
+  transactionOptions?: AwsDynamoDBDriverTransactionOptions
 ): { partitionKey?: string; keyConditionPrefix?: string; partitionKeyPrefix?: string } {
   if (hasSortKey(resolved.strategy)) {
     const pk =
@@ -94,7 +94,7 @@ export function getKeysContext(
 /**
  * Create DynamoDB client from options.
  */
-export function createDynamoClient(opts: AWSDDbDriverOptions): DynamoDBClient {
+export function createDynamoClient(opts: AwsDynamoDBDriverOptions): DynamoDBClient {
   if (opts.dynamoDbClient) return opts.dynamoDbClient as DynamoDBClient;
   return new DynamoDBClient({
     region: opts.region,
@@ -120,11 +120,11 @@ export function createDocClient(client: DynamoDBClient): DynamoDBDocumentClient 
 /**
  * Default key attribute names per strategy (spec defaults).
  */
-function defaultPartitionKeyName(strategy: ResolvedAWSDDbStrategy): string {
+function defaultPartitionKeyName(strategy: ResolvedAwsDynamoDBStrategy): string {
   return strategy === 'gsi_pk' || strategy === 'gsi_pk_sk' ? 'gpk' : 'pk';
 }
 
-function defaultSortKeyName(strategy: ResolvedAWSDDbStrategy): string {
+function defaultSortKeyName(strategy: ResolvedAwsDynamoDBStrategy): string {
   if (strategy === 'table_pk_sk') return 'sk';
   if (strategy === 'lsi') return 'lsk';
   if (strategy === 'gsi_pk_sk') return 'gsk';
@@ -135,7 +135,7 @@ function defaultSortKeyName(strategy: ResolvedAWSDDbStrategy): string {
  * Validate and resolve driver options. Creates client and doc client, applies defaults,
  * and forces readOnly for index strategies per spec.
  */
-export function validateDdbOptions(opts: AWSDDbDriverOptions): ResolvedAWSDDbDriverOptions {
+export function validateDynamoDBOptions(opts: AwsDynamoDBDriverOptions): ResolvedAwsDynamoDBDriverOptions {
   const strategy = resolveStrategy(opts);
   const resolvedBase = validateBaseDriverOptions({
     ...opts,
@@ -184,9 +184,9 @@ export function validateDdbOptions(opts: AWSDDbDriverOptions): ResolvedAWSDDbDri
     consistentRead,
     partitionKeyValue: 'partitionKeyValue' in opts ? opts.partitionKeyValue : undefined,
     indexName: 'indexName' in opts ? opts.indexName : undefined,
-    dynamoDbClient: dynamoDbClient as ResolvedAWSDDbDriverOptions['dynamoDbClient'],
+    dynamoDbClient: dynamoDbClient as ResolvedAwsDynamoDBDriverOptions['dynamoDbClient'],
     docClient,
     ...resolvedAWS,
     region: opts.region,
-  } as ResolvedAWSDDbDriverOptions;
+  } as ResolvedAwsDynamoDBDriverOptions;
 }

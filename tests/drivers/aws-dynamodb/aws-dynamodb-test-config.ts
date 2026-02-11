@@ -1,5 +1,5 @@
 import { DriverTestConfig, DriverTestConfigWithOptions } from "../../common/test-driver-config";
-import awsDdbDriver from "../../../src/drivers/aws-ddb/aws-ddb";
+import awsDynamoDBDriver from "../../../src/drivers/aws-dynamodb/aws-dynamodb";
 import { MockDynamoDBDocumentClient } from "../../helpers/mock-dynamodb";
 
 export const TABLE_PK_SK = 'test-table-pksk';
@@ -22,9 +22,9 @@ export const GSK_VALUE = 'gsk-testing';
 
 
 
-export const awsDdbDriverTestConfig: DriverTestConfig = {
-    name: 'aws-ddb',
-    base: awsDdbDriver,
+export const awsDynamoDBDriverTestConfig: DriverTestConfig = {
+    name: 'aws-dynamodb',
+    base: awsDynamoDBDriver,
     // flex: awsS3FlexDriver,
     mockClientOptions: {
         makeMockClient: () => new MockDynamoDBDocumentClient(),
@@ -35,8 +35,8 @@ export const awsDdbDriverTestConfig: DriverTestConfig = {
     additionalLimitedScenarios: [],
 }
 
-export const awsDdbDriverTestConfigWithOptions = {
-    ...awsDdbDriverTestConfig,
+export const awsDynamoDBDriverTestConfigWithOptions = {
+    ...awsDynamoDBDriverTestConfig,
     generateTestDriverOptions: () => ({
         region: 'us-east-1',
         tableName: TABLE_PK_SK,

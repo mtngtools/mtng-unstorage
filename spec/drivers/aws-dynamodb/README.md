@@ -1,12 +1,12 @@
-# AWS DynamoDB Driver Specifications (aws-ddb)
+# AWS DynamoDB Driver Specifications (aws-dynamodb)
 
 ## Overview
 The AWS DynamoDB driver enables using Amazon DynamoDB as a key-value storage backend.
 
 ### Driver Variants
-- **`awsDdbDriver`**: Base driver with standard key-value operations.
-- **`awsDdbFlexDriver`**: (Planned) Flex driver with custom key/value mapping support.
-- **`awsDdbVersionedDriver`**: (Planned) Versioned driver with item history support.
+- **`awsDynamoDBDriver`**: Base driver with standard key-value operations.
+- **`awsDynamoDBFlexDriver`**: (Planned) Flex driver with custom key/value mapping support.
+- **`awsDynamoDBVersionedDriver`**: (Planned) Versioned driver with item history support.
 
 ## Configuration
 
@@ -141,7 +141,7 @@ type PartitionKeyStrategyOptions = {
 #### Union Type
 The full driver options type is the union of these strategies:
 ```typescript
-type AWSDDbDriverOptions = AwsGeneralOptions & (SortKeyStrategyOptions | PartitionKeyStrategyOptions);
+type AwsDynamoDBDriverOptions = AwsGeneralOptions & (SortKeyStrategyOptions | PartitionKeyStrategyOptions);
 ```
 
 ### Transaction Options
@@ -197,7 +197,7 @@ Testing the `aws-ddb` driver requires special handling due to the nature of Dyna
     - **GSI Latency**: Since Global Secondary Indexes are eventually consistent, the "Reader" test suite must account for propagation delays (e.g., via retries or polling) when verifying writes.
 
 > [!IMPORTANT]
-> **Testing Complexity**: Unlike other drivers that implement the base test suite once, the `aws-ddb` driver is validated across multiple access patterns and Partition Key resolution paths using the unified `drivers-core.test.ts` runner.
+> **Testing Complexity**: Unlike other drivers that implement the base test suite once, the `aws-dynamodb` driver is validated across multiple access patterns and Partition Key resolution paths using the unified `drivers-core.test.ts` runner.
 >
 > **Breakdown of Test Scenarios (8 Total)**:
 > 1.  **Strategies with Sort Key (6 Tests)**:
@@ -238,6 +238,30 @@ To facilitate testing across all 5 strategies, the following environment variabl
 
 ## Implementation Preference
 
-Implement AwsDdbDriver class using DynamoDBDocumentClient.
+Implement AwsDynamoDBDriver class using DynamoDBDocumentClient.
 
+## Naming Guidance
+ 
+ The following naming conventions should be used for the `aws-dynamodb` driver to ensure clarity and consistency. This distinguishes between the generic service name, the specific driver implementation, and environment variables. Suffixes consistent with other drivers should be used as needed (for things like flex, versioned, etc. ).
+ 
+### In Docs
 
+- **In Prose**: `AWS DynamoDB`
+- **In Code**: `aws-dynamodb`
+
+ ### Driver & Files
+ - **In Folder Name**: `aws-dynamodb`
+ - **In File Name**: `aws-dynamodb`
+ - **Driver Name**: `aws-dynamodb` (e.g. `drivers/aws-dynamodb/`)
+
+ ### Classes & Functions
+ - **Class Name**: `AwsDynamoDBDriver`
+ - **Factory Function**: `awsDynamoDBDriver`
+  
+ ### Environment Variables
+ - **Prefix**: `AWS_DDB_` (Shortened for brevity in env vars)
+   - Example: `AWS_DDB_TABLE_NAME`
+   - Example: `AWS_DDB_REGION`
+ 
+ ### Interfaces and Types
+ - **Types**: `AwsDynamoDB`

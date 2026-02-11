@@ -32,10 +32,10 @@
       "import": "./dist/drivers/aws-ssm/index.js",
       "require": "./dist/drivers/aws-ssm/index.cjs"
     },
-    "./drivers/aws-ddb": {
-      "types": "./dist/drivers/aws-ddb/index.d.ts",
-      "import": "./dist/drivers/aws-ddb/index.js",
-      "require": "./dist/drivers/aws-ddb/index.cjs"
+    "./drivers/aws-dynamodb": {
+      "types": "./dist/drivers/aws-dynamodb/index.d.ts",
+      "import": "./dist/drivers/aws-dynamodb/index.js",
+      "require": "./dist/drivers/aws-dynamodb/index.cjs"
     }
   },
   "files": [

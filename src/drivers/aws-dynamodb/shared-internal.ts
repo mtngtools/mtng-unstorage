@@ -18,17 +18,17 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { filterKeyByDepth } from 'unstorage';
 import { buildDynamoKey, getKeysContext, resolvePartitionKey } from './shared-public.js';
-import type { ResolvedAWSDDbDriverOptions, MTDdbDriverTransactionOptions } from './types.js';
+import type { ResolvedAwsDynamoDBDriverOptions, AwsDynamoDBDriverTransactionOptions } from './types.js';
 import { hasSortKey } from './types.js';
 
 function consistentReadForRequest(
-  resolved: ResolvedAWSDDbDriverOptions,
-  opts?: MTDdbDriverTransactionOptions
+  resolved: ResolvedAwsDynamoDBDriverOptions,
+  opts?: AwsDynamoDBDriverTransactionOptions
 ): boolean {
   return opts?.consistentRead ?? resolved.consistentRead;
 }
 
-export function createDdbNativeDriver(resolved: ResolvedAWSDDbDriverOptions) {
+export function createDynamoDBNativeDriver(resolved: ResolvedAwsDynamoDBDriverOptions) {
   const doc = resolved.docClient;
   const tableName = resolved.tableName;
   const valueAttr = resolved.valueAttributeName;
@@ -36,7 +36,7 @@ export function createDdbNativeDriver(resolved: ResolvedAWSDDbDriverOptions) {
   const pkName = resolved.partitionKeyName;
   const skName = resolved.sortKeyName;
 
-  const hasItem = async (key: string, opts?: MTDdbDriverTransactionOptions): Promise<boolean> => {
+  const hasItem = async (key: string, opts?: AwsDynamoDBDriverTransactionOptions): Promise<boolean> => {
     const Key = buildDynamoKey(resolved, key, opts);
     const result = await doc.send(
       new GetCommand({
@@ -52,7 +52,7 @@ export function createDdbNativeDriver(resolved: ResolvedAWSDDbDriverOptions) {
 
   const getItem = async <T = unknown>(
     key: string,
-    opts?: MTDdbDriverTransactionOptions
+    opts?: AwsDynamoDBDriverTransactionOptions
   ): Promise<T | null> => {
     const Key = buildDynamoKey(resolved, key, opts);
     const result = await doc.send(
@@ -102,7 +102,7 @@ export function createDdbNativeDriver(resolved: ResolvedAWSDDbDriverOptions) {
 
   const getItems = async (
     items: { key: string }[],
-    opts?: MTDdbDriverTransactionOptions
+    opts?: AwsDynamoDBDriverTransactionOptions
   ): Promise<{ key: string; value: unknown }[]> => {
     if (items.length === 0) return [];
     const keys = items.map((it) => (typeof it === 'string' ? it : it.key));
@@ -183,7 +183,7 @@ export function createDdbNativeDriver(resolved: ResolvedAWSDDbDriverOptions) {
     return keys.map((key) => ({ key, value: valueByKey.get(key) ?? null }));
   };
 
-  const setItem = async (key: string, value: unknown, opts?: MTDdbDriverTransactionOptions): Promise<void> => {
+  const setItem = async (key: string, value: unknown, opts?: AwsDynamoDBDriverTransactionOptions): Promise<void> => {
     const Key = buildDynamoKey(resolved, key, opts);
     let Item: Record<string, unknown>;
     if (returnFull && value !== null && typeof value === 'object' && !Array.isArray(value)) {
@@ -201,7 +201,7 @@ export function createDdbNativeDriver(resolved: ResolvedAWSDDbDriverOptions) {
     );
   };
 
-  const removeItem = async (key: string, opts?: MTDdbDriverTransactionOptions): Promise<void> => {
+  const removeItem = async (key: string, opts?: AwsDynamoDBDriverTransactionOptions): Promise<void> => {
     const Key = buildDynamoKey(resolved, key, opts);
     await doc.send(
       new DeleteCommand({
@@ -213,7 +213,7 @@ export function createDdbNativeDriver(resolved: ResolvedAWSDDbDriverOptions) {
 
   const getKeys = async (
     basePrefix?: string,
-    opts?: MTDdbDriverTransactionOptions
+    opts?: AwsDynamoDBDriverTransactionOptions
   ): Promise<string[]> => {
     const maxDepth = opts?.maxDepth ?? resolved.maxDepth;
     const ctx = getKeysContext(resolved, basePrefix ?? '');
@@ -304,7 +304,7 @@ export function createDdbNativeDriver(resolved: ResolvedAWSDDbDriverOptions) {
       }
     }
 
-    const keys = await getKeys(base ?? '', clearOpts as MTDdbDriverTransactionOptions);
+    const keys = await getKeys(base ?? '', clearOpts as AwsDynamoDBDriverTransactionOptions);
     const BATCH_SIZE = 25;
     type DeleteRequestItem = { DeleteRequest: { Key: Record<string, string> } };
     for (let i = 0; i < keys.length; i += BATCH_SIZE) {

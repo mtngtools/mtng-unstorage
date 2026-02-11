@@ -4,12 +4,12 @@
  * Exports base driver and driver-specific types and public helpers.
  */
 
-export { default, default as AwsDdbDriver } from './aws-ddb.js';
-export { default as awsDdbDriver } from './aws-ddb.js';
+export { default, default as AwsDynamoDBDriver } from './aws-dynamodb.js';
+export { default as awsDynamoDBDriver } from './aws-dynamodb.js';
 
 export * from './types.js';
 export {
-  validateDdbOptions,
+  validateDynamoDBOptions,
   createDynamoClient,
   createDocClient,
   buildDynamoKey,
