@@ -28,7 +28,8 @@ We follow a consistent pattern for both **Integration** and **E2E** test suites 
 These tests mirror the standard test suite from `unjs/unstorage`.
 - **Purpose**: Ensure our drivers behave exactly like standard unstorage drivers.
 - **Scope**: Basic `setItem`, `getItem`, `removeItem`, `getKeys`.
-- **File Pattern**: `tests/**/drivers-core.test.ts`
+- **Runner**: `tests/integration/drivers-core.test.ts`
+- **Mechanism**: Drivers are registered in the runner via `DriverTestConfigWithOptions`, which defines the driver factory, mock client configuration, and optional additional scenarios (see `tests/drivers/`).
 
 ### 2. mtngTOOLS Specific Tests (`drivers-mt`)
 These tests cover features unique to `mtng-unstorage` that go beyond the standard spec.
@@ -39,12 +40,10 @@ These tests cover features unique to `mtng-unstorage` that go beyond the standar
 ### 3. Provider Tests
 Shared logic for setting up test environments (e.g., temporary S3 buckets or mocked clients) is centralized in `tests/providers/`.
 
-### 4. Driver-specific runners (aws-ddb)
-The **aws-ddb** driver does not use the same single-driver-per-variant pattern as other drivers. It uses an **aws-ddb–specific runner** so that existing core/testDriver flow is left unchanged for S3 and SSM.
+### 4. Core compliance for aws-ddb (`drivers-core-aws-ddb`)
+The **aws-ddb** driver uses a dedicated integration file and runner so that the same variant contract as `drivers-core` (base, flex, versioned) is applied **per scenario** instead of once per driver.
 
 - **Meaning of “base” for aws-ddb**: Running aws-ddb “base” means **running the driver in 8 scenarios**, not a single driver instance. Each scenario is a combination of strategy and partition-key resolution path (see [drivers/aws-ddb/README.md](drivers/aws-ddb/README.md) § Testing Considerations).
-- **Writer paired with read-only scenarios**: Six of the eight scenarios use **index strategies** (read-only). For those, the runner uses a **Writer** driver (table strategy with write access) to populate the table and to perform teardown (e.g. `clear`). The **Reader** driver (index strategy) runs only read operations. The runner pairs one Writer with each read-only scenario so that core compliance tests can run (writes and clear via Writer, reads via Reader).
-- **Two PK-only scenarios**: The remaining two scenarios use partition-key–only strategies (`table_pk`, `gsi_pk`) with a single writable driver and standard testDriver flow (including `afterEach` clear on that driver).
 
 ## E2E Test Configuration
 

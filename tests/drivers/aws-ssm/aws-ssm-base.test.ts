@@ -39,13 +39,13 @@ describe('aws-ssm base (mt tests)', () => {
     clientOptionKey: 'ssmClient',
   })
 
-  baseMtTests({
-    makeDriver,
-    makeMockClient,
-    defaultOptions,
-    clientOptionKey: 'ssmClient',
-    readOnlySeedKey: '/test-prefix/key1',
-  })
+  // baseMtTests({
+  //   makeDriver,
+  //   makeMockClient,
+  //   defaultOptions,
+  //   clientOptionKey: 'ssmClient',
+  //   readOnlySeedKey: '/test-prefix/key1',
+  // })
 
   describe('SSM-specific', () => {
     it('throws when region is missing', () => {

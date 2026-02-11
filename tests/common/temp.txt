@@ -1,0 +1,161 @@
+
+// const baseSortKeyOptions: Partial<AWSDDbDriverOptions> = {
+//   tableName: TABLE_PK_SK,
+//   storagePrefix: 'p/',
+//   base: '',
+//   partitionKeyName: 'pk',
+//   sortKeyName: 'sk',
+//   valueAttributeName: 'value',
+// };
+
+// const basePkOnlyOptions: Partial<AWSDDbDriverOptions> = {
+//   region: 'us-east-1',
+//   tableName: TABLE_PK,
+//   storagePrefix: 'p/',
+//   base: 'b',
+//   allowClear: true,
+//   partitionKeyName: 'pk',
+//   valueAttributeName: 'value',
+// };
+
+// // Sort-key: 1 writable, 5 read-only
+// const sortKeyWritableScenarios: WritableScenario[] = [
+//   {
+//     name: 'table_pk_sk (driver partitionKeyValue)',
+//     getDriverOptions: (defaultOptions, docClient) =>
+//       ({
+//         ...defaultOptions,
+//         strategy: 'table_pk_sk',
+//         partitionKeyValue: PK_VALUE,
+//         docClient,
+//       } as AWSDDbDriverOptions),
+//   },
+// ];
+
+// const sortKeyReadOnlyScenarios: ReadOnlyScenario[] = [
+//   {
+//     name: 'table_pk_sk (transaction partitionKeyValue)',
+//     getWriterOptions: (defaultOptions, docClient) =>
+//       ({
+//         ...defaultOptions,
+//         strategy: 'table_pk_sk',
+//         partitionKeyValue: PK_VALUE,
+//         docClient,
+//       } as AWSDDbDriverOptions),
+//     getReaderOptions: (defaultOptions, docClient) =>
+//       ({
+//         ...defaultOptions,
+//         strategy: 'table_pk_sk',
+//         docClient,
+//       } as AWSDDbDriverOptions),
+//   },
+//   {
+//     name: 'lsi (driver partitionKeyValue)',
+//     getWriterOptions: (defaultOptions, docClient) =>
+//       ({
+//         ...defaultOptions,
+//         strategy: 'table_pk_sk',
+//         partitionKeyValue: PK_VALUE,
+//         docClient,
+//       } as AWSDDbDriverOptions),
+//     getReaderOptions: (defaultOptions, docClient) =>
+//       ({
+//         ...defaultOptions,
+//         strategy: 'lsi',
+//         indexName: LSI_NAME,
+//         partitionKeyValue: PK_VALUE,
+//         sortKeyName: 'lsk',
+//         docClient,
+//       } as AWSDDbDriverOptions),
+//   },
+//   {
+//     name: 'lsi (transaction partitionKeyValue)',
+//     getWriterOptions: (defaultOptions, docClient) =>
+//       ({
+//         ...defaultOptions,
+//         strategy: 'table_pk_sk',
+//         partitionKeyValue: PK_VALUE,
+//         docClient,
+//       } as AWSDDbDriverOptions),
+//     getReaderOptions: (defaultOptions, docClient) =>
+//       ({
+//         ...defaultOptions,
+//         strategy: 'lsi',
+//         indexName: LSI_NAME,
+//         sortKeyName: 'lsk',
+//         docClient,
+//       } as AWSDDbDriverOptions),
+//   },
+//   {
+//     name: 'gsi_pk_sk (driver partitionKeyValue)',
+//     getWriterOptions: (defaultOptions, docClient) =>
+//       ({
+//         ...defaultOptions,
+//         strategy: 'table_pk_sk',
+//         partitionKeyValue: PK_VALUE,
+//         docClient,
+//       } as AWSDDbDriverOptions),
+//     getReaderOptions: (defaultOptions, docClient) =>
+//       ({
+//         ...defaultOptions,
+//         strategy: 'gsi_pk_sk',
+//         indexName: GSI_NAME,
+//         partitionKeyValue: PK_VALUE,
+//         partitionKeyName: 'gpk',
+//         sortKeyName: 'gsk',
+//         docClient,
+//       } as AWSDDbDriverOptions),
+//   },
+//   {
+//     name: 'gsi_pk_sk (transaction partitionKeyValue)',
+//     getWriterOptions: (defaultOptions, docClient) =>
+//       ({
+//         ...defaultOptions,
+//         strategy: 'table_pk_sk',
+//         partitionKeyValue: PK_VALUE,
+//         docClient,
+//       } as AWSDDbDriverOptions),
+//     getReaderOptions: (defaultOptions, docClient) =>
+//       ({
+//         ...defaultOptions,
+//         strategy: 'gsi_pk_sk',
+//         indexName: GSI_NAME,
+//         partitionKeyName: 'gpk',
+//         sortKeyName: 'gsk',
+//         docClient,
+//       } as AWSDDbDriverOptions),
+//   },
+// ];
+
+// // PK-only: 1 writable, 1 read-only
+// const pkOnlyWritableScenarios: WritableScenario[] = [
+//   {
+//     name: 'table_pk',
+//     getDriverOptions: (defaultOptions, docClient) =>
+//       ({
+//         ...defaultOptions,
+//         strategy: 'table_pk',
+//         docClient,
+//       } as AWSDDbDriverOptions),
+//   },
+// ];
+
+// const pkOnlyReadOnlyScenarios: ReadOnlyScenario[] = [
+//   {
+//     name: 'gsi_pk',
+//     getWriterOptions: (defaultOptions, docClient) =>
+//       ({
+//         ...defaultOptions,
+//         strategy: 'table_pk',
+//         docClient,
+//       } as AWSDDbDriverOptions),
+//     getReaderOptions: (defaultOptions, docClient) =>
+//       ({
+//         ...defaultOptions,
+//         strategy: 'gsi_pk',
+//         indexName: GSI_NAME,
+//         partitionKeyName: 'gpk',
+//         docClient,
+//       } as AWSDDbDriverOptions),
+//   },
+// ];

@@ -51,7 +51,7 @@ export function flexMtTests(opts: FlexVariantTestOptions) {
         // Note: The exact behavior depends on the driver implementation
         // Some drivers may return empty array instead of throwing
         mockClient.storage.set('direct-key', 'value')
-        
+
         // The driver may handle this gracefully by returning empty array
         // or it may throw - test for either behavior
         try {

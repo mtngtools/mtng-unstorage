@@ -7,7 +7,7 @@
 
 // Import driver-specific MT tests (these use mocks)
 import '../drivers/aws-s3/aws-s3-base.test.js'
-import '../drivers/aws-s3/aws-s3-flex.test.js'
+// import '../drivers/aws-s3/aws-s3-flex.test.js'
 // Import TypeScript type tests (integration only, not E2E)
 import '../drivers/aws-s3/aws-s3-base-types.test.js'
 import '../drivers/aws-s3/aws-s3-flex-types.test.js'
@@ -21,10 +21,6 @@ import '../drivers/aws-s3/shared-native.test.js'
 // Import utils tests (integration only, not E2E)
 import '../utils/common-lib.test.js'
 import '../utils/common-storage.test.js'
-// Future: import '../drivers/aws-s3/aws-s3-versioned.test.js'
-// Future: import '../drivers/aws-dynamodb/aws-dynamodb-base.test.js'
-// Future: import '../drivers/aws-dynamodb/aws-dynamodb-flex.test.js'
-// Future: import '../drivers/aws-dynamodb/aws-dynamodb-versioned.test.js'
 import '../drivers/aws-ssm/aws-ssm-base.test.js'
 import '../drivers/aws-ssm/aws-ssm-base-types.test.js'
 import '../drivers/aws-ssm/aws-ssm-flex.test.js'

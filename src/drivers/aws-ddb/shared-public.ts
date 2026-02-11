@@ -100,12 +100,12 @@ export function createDynamoClient(opts: AWSDDbDriverOptions): DynamoDBClient {
     region: opts.region,
     ...(opts.accessKeyId && opts.secretAccessKey
       ? {
-          credentials: {
-            accessKeyId: opts.accessKeyId,
-            secretAccessKey: opts.secretAccessKey,
-            ...(opts.sessionToken ? { sessionToken: opts.sessionToken } : {}),
-          },
-        }
+        credentials: {
+          accessKeyId: opts.accessKeyId,
+          secretAccessKey: opts.secretAccessKey,
+          ...(opts.sessionToken ? { sessionToken: opts.sessionToken } : {}),
+        },
+      }
       : {}),
   });
 }

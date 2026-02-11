@@ -197,7 +197,7 @@ Testing the `aws-ddb` driver requires special handling due to the nature of Dyna
     - **GSI Latency**: Since Global Secondary Indexes are eventually consistent, the "Reader" test suite must account for propagation delays (e.g., via retries or polling) when verifying writes.
 
 > [!IMPORTANT]
-> **Testing Complexity**: Unlike other drivers that implement the base test suite once, the `aws-ddb` driver must run the suite **8 times** to validate all access patterns and Partition Key resolution paths.
+> **Testing Complexity**: Unlike other drivers that implement the base test suite once, the `aws-ddb` driver is validated across multiple access patterns and Partition Key resolution paths using the unified `drivers-core.test.ts` runner.
 >
 > **Breakdown of Test Scenarios (8 Total)**:
 > 1.  **Strategies with Sort Key (6 Tests)**:

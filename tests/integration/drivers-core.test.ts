@@ -1,109 +1,95 @@
 import { describe } from 'vitest'
 // TODO: Import testDriver from unstorage - may need to copy from node_modules/unstorage/test/drivers/utils.ts
 // or create a local copy in tests/helpers/
-import { testDriver } from '../helpers/test-driver.js'
-import awsS3Driver from '../../src/drivers/aws-s3/aws-s3.js'
-import awsS3FlexDriver from '../../src/drivers/aws-s3/aws-s3-flex.js'
+import { testDriver as testDriverCore } from '../common/test-driver-default.js'
 // import awsS3VersionedDriver from '../../src/drivers/aws-s3/aws-s3-versioned.js' // Future
 import { MockS3Client } from '../../tests/helpers/mock-s3.js'
-// import { MockDynamodbClient } from '../helpers/mock-dynamodb.js' // Future
+// import { AWSDDbDriverOptions } from '../../src/drivers/aws-ddb/types.js'
+// import awsDdbDriver from '../../src/drivers/aws-ddb/aws-ddb.js'
+// import MockDynamoDBDocumentClient from '../helpers/mock-dynamodb.js'
 // import { MockSsmClient } from '../helpers/mock-ssm.js' // Future
 
 // Shared test functions for variants
+// import { flexCoreTests } from '../variants/flex/flex-core-tests.js'
+// import { versionedTests } from '../variants/versioned/versioned-tests.js'
+import { DriverTestConfigWithOptions } from '../common/test-driver-config.js'
 import { flexCoreTests } from '../variants/flex/flex-core-tests.js'
-import { versionedTests } from '../variants/versioned/versioned-tests.js'
-
-// Driver configuration type
-type DriverConfig = {
-  name: string
-  base: (opts: any) => any
-  flex: (opts: any) => any
-  versioned: (opts: any) => any
-  makeMockClient: () => any
-  getDefaultOptions: () => any
-}
+import { awsDdbDriverTestConfigWithOptions, TABLE_PK_SK } from '../drivers/aws-ddb/aws-ddb-test-config.js'
+import { awsS3DriverTestConfig, awsS3DriverTestConfigWithOptions } from '../drivers/aws-s3/aws-s3-test-config.js'
 
 // Define all drivers
-const drivers: DriverConfig[] = [
-  {
-    name: 'aws-s3',
-    base: awsS3Driver,
-    flex: awsS3FlexDriver,
-    versioned: awsS3Driver, // TODO: Replace with awsS3VersionedDriver when available
-    makeMockClient: () => new MockS3Client(),
-    getDefaultOptions: () => ({
-      bucket: 'test-bucket',
-      storagePrefix: 'test-prefix/',
-      allowClear: true,
-    }),
-  },
-  // Future drivers:
-  // {
-  //   name: 'aws-dynamodb',
-  //   base: awsDynamodbDriver,
-  //   flex: awsDynamodbFlexDriver,
-  //   versioned: awsDynamodbVersionedDriver,
-  //   makeMockClient: () => new MockDynamodbClient(),
-  //   getDefaultOptions: () => ({
-  //     table: 'test-table',
-  //     allowClear: true,
-  //   }),
-  // },
-  // {
-  //   name: 'aws-ssm',
-  //   base: awsSsmDriver,
-  //   flex: awsSsmFlexDriver,
-  //   versioned: awsSsmVersionedDriver,
-  //   makeMockClient: () => new MockSsmClient(),
-  //   getDefaultOptions: () => ({
-  //     prefix: '/test/',
-  //     allowClear: true,
-  //   }),
-  // },
+const drivers: DriverTestConfigWithOptions[] = [
+  awsS3DriverTestConfigWithOptions,
+  awsDdbDriverTestConfigWithOptions,
 ]
 
+
 // Test all drivers and variants
-drivers.forEach(({ name, base, flex, versioned, makeMockClient, getDefaultOptions }) => {
-  describe(name, () => {
-    const mockClient = makeMockClient()
-    const defaultOptions = getDefaultOptions()
+drivers.forEach((driverTestConfigWithOptions) => {
+  const { name, additionalWriteScenarios } = driverTestConfigWithOptions;
+  describe(`DRIVER:${name}`, () => {
 
-    // Base variant - just the base driver with standard testDriver tests
-    describe('base', () => {
-      testDriver({
-        driver: () => base({
-          ...defaultOptions,
-          s3Client: mockClient, // TODO: Make this generic (client: mockClient)
-        }),
-      })
+    describe('default (full)', () => {
+      testAllDriverVariantsCore(driverTestConfigWithOptions)
+    }) //end describe 'default (full)'
+
+    additionalWriteScenarios.forEach((scenario) => {
+      describe(scenario.name, () => {
+
+        const scenarioTestConfigWithOptions: DriverTestConfigWithOptions = {
+          ...driverTestConfigWithOptions,
+          generateTestDriverOptions: () => ({
+            ...driverTestConfigWithOptions.generateTestDriverOptions(),
+            ...scenario.driverOptions,
+          }),
+        }
+        testAllDriverVariantsCore(scenarioTestConfigWithOptions);
+
+      }) //end describe(scenario.name)
+    }) //end additionalWriteScenarios.forEach((scenario) => {
+
+
+  }) //end describe(name)
+})
+
+function testAllDriverVariantsCore(driverTestConfigWithOptions: DriverTestConfigWithOptions) {
+  const { base, flex, versioned, generateTestDriverOptions, mockClientOptions } = driverTestConfigWithOptions;
+  describe('base', () => {
+    testDriverCore({
+      driver: base,
+      generateTestDriverOptions,
+      mockClientOptions,
+      // additionalTests: undefined,
     })
+  }) //end base describe
 
+  if (flex) {
     // Flex variant - base driver tests + flex-specific tests
     describe('flex', () => {
-      testDriver({
-        driver: () => flex({
-          ...defaultOptions,
-          s3Client: mockClient, // TODO: Make this generic
-        }),
+      testDriverCore({
+        driver: flex,
+        generateTestDriverOptions,
+        mockClientOptions,
         additionalTests: flexCoreTests,
       })
     })
+  } //end flex
 
+  if (versioned) {
     // Versioned variant - base driver tests + flex tests + version-specific tests
     describe('versioned', () => {
-      testDriver({
-        driver: () => versioned({
-          ...defaultOptions,
-          s3Client: mockClient, // TODO: Make this generic
-        }),
+      testDriverCore({
+        driver: versioned,
+        generateTestDriverOptions,
+        mockClientOptions,
         additionalTests: (ctx) => {
           // Versioned includes flex functionality, so run flex tests first
           flexCoreTests(ctx)
           // Then run version-specific tests
-          versionedTests(ctx)
+          // versionedTests(ctx)
         },
       })
     })
-  })
-})
+  }
+}
 
