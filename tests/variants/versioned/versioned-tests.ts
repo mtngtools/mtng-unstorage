@@ -1,5 +1,5 @@
 // TODO: Import TestContext type from test-driver helper
-import type { TestContext } from '../../helpers/test-driver.js'
+import type { MTTestContext } from '../../common/test-driver-config.js'
 
 /**
  * Versioned variant-specific tests.
@@ -10,7 +10,7 @@ import type { TestContext } from '../../helpers/test-driver.js'
  * Note: Versioned drivers include flex functionality, so flexCoreTests()
  * should be called before versionedTests() in the test suite.
  */
-export function versionedTests(_ctx: TestContext) {
+export function versionedTests(_ctx: MTTestContext) {
   // TODO: Implement versioned-specific tests
   // These tests should cover:
   // - Version creation and retrieval

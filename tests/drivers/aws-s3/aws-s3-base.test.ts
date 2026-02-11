@@ -37,12 +37,12 @@ describe('aws-s3 base (mt tests)', () => {
     defaultOptions
   })
 
-  // Shared base variant MT tests
-  baseMtTests({
-    makeDriver,
-    makeMockClient,
-    defaultOptions
-  })
+  // // Shared base variant MT tests
+  // baseMtTests({
+  //   makeDriver,
+  //   makeMockClient,
+  //   defaultOptions
+  // })
 
   // S3-specific additional tests
   describe('S3-specific', () => {

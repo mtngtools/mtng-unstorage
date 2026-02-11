@@ -19,7 +19,7 @@
  */
 
 // Export common types
-export type { 
+export type {
   MTBaseDriverOptions,
   MTBaseDriverTransactionOptions,
   ConditionalDriver,
@@ -30,12 +30,12 @@ export type {
 } from './types.js';
 
 // Export utilities
-export { 
-  validateKey 
+export {
+  validateKey
 } from './utils.js';
 
 // Export drivers for convenience (also available via subpaths)
-export { 
+export {
   default as awsS3Driver,
   AwsS3Driver,
   AwsS3FlexDriver
@@ -52,7 +52,7 @@ export {
 } from './drivers/aws-ddb/index.js';
 
 // Export driver-specific types for convenience
-export type { 
+export type {
   AwsS3DriverOptions,
   S3PutObjectOptions,
   AwsS3FlexDriverOptions
