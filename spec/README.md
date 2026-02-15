@@ -24,7 +24,7 @@ Core definitions that ensure consistency across all drivers.
 Specific storage backend implementations.
 - [AWS S3](drivers/aws-s3/README.md): S3 driver supporting standard and flex modes.
 - [AWS SSM](drivers/aws-ssm/README.md): Systems Manager Parameter Store driver.
-- [AWS DynamoDB](drivers/aws-ddb/README.md): DynamoDB key-value driver.
+- [AWS DynamoDB](drivers/aws-dynamodb/README.md): DynamoDB key-value driver.
 
 ### 3. Testing
 - [Testing Strategy](testing.md): Overview of unit and E2E testing approaches.
