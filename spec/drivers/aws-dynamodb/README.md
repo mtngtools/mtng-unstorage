@@ -87,6 +87,7 @@ These strategies treat the `unstorage` `key` as the Sort Key. The Partition Key 
 | `valueAttributeName` | `string` | No | Name of the attribute to store/retrieve the value. Default `value`. Ignored if `returnFullObject` is `true`. |
 | `returnFullObject` | `boolean` | No | If `true`, `getItem` returns the entire DynamoDB item (object) and `setItem` stores the input object directly. Default `false`. |
 | `consistentRead` | `boolean` | No | If `true`, performs a strongly consistent read. Default `false`. |
+| `keyDelimiter` | `string` | No | Delimiter used to join prefix parts (e.g. storagePrefix, base) and the key. Default `#`. |
 
 **Strategies**:
 - **`table_pk_sk`** (Default): Direct table access (PK + SK).
@@ -102,6 +103,7 @@ type SortKeyStrategyOptions = {
     valueAttributeName?: string;
     returnFullObject?: boolean;
     consistentRead?: boolean;
+    keyDelimiter?: string;
 } & (
     | { strategy?: 'table_pk_sk' }
     | { strategy: 'lsi'; indexName: string }
@@ -120,6 +122,7 @@ These strategies treat the `unstorage` `key` as the Partition Key.
 | `valueAttributeName` | `string` | No | Name of the attribute to store/retrieve the value. Default `value`. Ignored if `returnFullObject` is `true`. |
 | `returnFullObject` | `boolean` | No | If `true`, `getItem` returns the entire DynamoDB item (object) and `setItem` stores the input object directly. Default `false`. |
 | `consistentRead` | `boolean` | No | If `true`, performs a strongly consistent read. Default `false`. |
+| `keyDelimiter` | `string` | No | Delimiter used to join prefix parts (e.g. storagePrefix, base) and the key. Default `#`. |
 
 **Strategies**:
 - **`table_pk`**: Direct table access (PK only).
@@ -132,6 +135,7 @@ type PartitionKeyStrategyOptions = {
     valueAttributeName?: string;
     returnFullObject?: boolean;
     consistentRead?: boolean;
+    keyDelimiter?: string;
 } & (
     | { strategy: 'table_pk' }
     | { strategy: 'gsi_pk'; indexName: string }
