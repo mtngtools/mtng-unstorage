@@ -10,12 +10,9 @@
 
 import { it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import {
-  type Storage,
-  type Driver,
-  createStorage,
   restoreSnapshot,
 } from 'unstorage';
-import { afterAllSetupCtx as afterAllCleanCtx, afterEachSetupCtx as afterEachCleanCtx, beforeAllSetupCtx, maybeMakeMockClient, MockClientOptions, MTTestContext, MTTestOptions } from './test-driver-config';
+import { afterAllSetupCtx as afterAllCleanCtx, afterEachSetupCtx as afterEachCleanCtx, beforeAllSetupCtx, MTTestContext, MTTestOptions } from './test-driver-config';
 
 export function testDriver(testOpts: MTTestOptions) {
   const ctx = testOpts as MTTestContext;

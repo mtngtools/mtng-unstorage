@@ -3,7 +3,6 @@ import { describe } from 'vitest'
 // or create a local copy in tests/helpers/
 import { testDriver as testDriverCore } from '../common/test-driver-default.js'
 // import awsS3VersionedDriver from '../../src/drivers/aws-s3/aws-s3-versioned.js' // Future
-import { MockS3Client } from '../../tests/helpers/mock-s3.js'
 // import { AWSDDbDriverOptions } from '../../src/drivers/aws-ddb/types.js'
 // import awsDdbDriver from '../../src/drivers/aws-ddb/aws-ddb.js'
 // import MockDynamoDBDocumentClient from '../helpers/mock-dynamodb.js'
@@ -15,7 +14,7 @@ import { MockS3Client } from '../../tests/helpers/mock-s3.js'
 import { DriverTestConfigWithOptions } from '../common/test-driver-config.js'
 import { flexCoreTests } from '../variants/flex/flex-core-tests.js'
 import { awsDynamoDBDriverTestConfigWithOptions } from '../drivers/aws-dynamodb/aws-dynamodb-test-config.js'
-import { awsS3DriverTestConfig, awsS3DriverTestConfigWithOptions } from '../drivers/aws-s3/aws-s3-test-config.js'
+import { awsS3DriverTestConfigWithOptions } from '../drivers/aws-s3/aws-s3-test-config.js'
 
 // Define all drivers
 const drivers: DriverTestConfigWithOptions[] = [
