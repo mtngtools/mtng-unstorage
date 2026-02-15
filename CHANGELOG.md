@@ -23,7 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-02-15
+
 ### Added
+- **New Driver**: `aws-dynamodb` backend with `getItems`/`clear` support, prefix mode, and shared types.
+- **New Driver**: `aws-ssm` and `aws-ssm-flex` drivers for AWS Systems Manager Parameter Store.
 - S3 drivers now accept optional `s3Client`; when omitted, the driver constructs an internal `S3Client` using the AWS SDK default provider chain.
 - Support for optional inline AWS configuration when constructing an internal client: `region`, `accessKeyId`, `secretAccessKey`, and `sessionToken`.
 - New subpath exports for better tree-shaking and API organization:
@@ -47,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   import { validateKey } from '@mtngtools/unstorage/utils';
   import type { MTBaseDriverOptions } from '@mtngtools/unstorage/types';
   ```
+
+- Updated mapping function signatures to use object parameters (#59, #58).
 
 ## [0.2.0] - 2025-11-01
 
