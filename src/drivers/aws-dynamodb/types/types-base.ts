@@ -37,6 +37,7 @@ export type SortKeyStrategyOptionsBase = {
   valueAttributeName?: string;
   returnFullObject?: boolean;
   consistentRead?: boolean;
+  keyDelimiter?: string;
 };
 
 export type SortKeyStrategyOptions = SortKeyStrategyOptionsBase &
@@ -53,6 +54,7 @@ export type PartitionKeyOnlyStrategyOptionsBase = {
   valueAttributeName?: string;
   returnFullObject?: boolean;
   consistentRead?: boolean;
+  keyDelimiter?: string;
 };
 
 export type PartitionKeyOnlyStrategyOptions = PartitionKeyOnlyStrategyOptionsBase &
@@ -104,6 +106,7 @@ export type ResolvedAwsDynamoDBDriverOptions = Prettify<
     indexName?: string;
     fullBasePrefix: string;
     partitionKeyValue?: string;
+    keyDelimiter: string;
   }
 >;
 

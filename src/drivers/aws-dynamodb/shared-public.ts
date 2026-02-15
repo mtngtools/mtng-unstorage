@@ -64,7 +64,8 @@ export function buildDynamoKey(
     };
   }
   const prefix = (resolved.fullBasePrefix ?? '').trim();
-  const fullKey = prefix ? (prefix.endsWith(':') ? prefix + key : prefix + ':' + key) : key;
+  const deli = resolved.keyDelimiter;
+  const fullKey = prefix ? (prefix.endsWith(deli) ? prefix + key : prefix + deli + key) : key;
   return { [pkName]: fullKey };
 }
 
@@ -87,7 +88,8 @@ export function getKeysContext(
   }
   const fullBase = (resolved.fullBasePrefix ?? '').trim();
   const part = (basePrefix ?? '').trim();
-  const partitionKeyPrefix = part ? (fullBase ? fullBase + ':' + part : part) : fullBase;
+  const deli = resolved.keyDelimiter;
+  const partitionKeyPrefix = part ? (fullBase ? fullBase + deli + part : part) : fullBase;
   return { partitionKeyPrefix: partitionKeyPrefix || undefined };
 }
 
@@ -165,9 +167,10 @@ export function validateDynamoDBOptions(opts: AwsDynamoDBDriverOptions): Resolve
   const valueAttributeName = opts.valueAttributeName ?? 'value';
   const returnFullObject = opts.returnFullObject ?? false;
   const consistentRead = opts.consistentRead ?? false;
+  const keyDelimiter = opts.keyDelimiter ?? '#';
 
   // Same concat order as aws-s3: storagePrefix + base. Effective key in methods = storagePrefix + base + requested key.
-  const fullBasePrefix = [resolvedBase.storagePrefix, resolvedBase.base].filter(Boolean).join(':');
+  const fullBasePrefix = [resolvedBase.storagePrefix, resolvedBase.base].filter(Boolean).join(keyDelimiter);
 
   const readOnly = isIndexStrategy(strategy) ? true : (resolvedBase.readOnly ?? false);
 
@@ -184,6 +187,7 @@ export function validateDynamoDBOptions(opts: AwsDynamoDBDriverOptions): Resolve
     consistentRead,
     partitionKeyValue: 'partitionKeyValue' in opts ? opts.partitionKeyValue : undefined,
     indexName: 'indexName' in opts ? opts.indexName : undefined,
+    keyDelimiter,
     dynamoDbClient: dynamoDbClient as ResolvedAwsDynamoDBDriverOptions['dynamoDbClient'],
     docClient,
     ...resolvedAWS,
