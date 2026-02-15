@@ -5,7 +5,7 @@
  * Tests: readOnly mode, allowClear option, maxDepth filtering, TypeScript type checking
  */
 
-import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
+import { describe, expect, beforeAll, afterAll, afterEach } from 'vitest'
 import { createStorage } from 'unstorage'
 import type { Driver } from 'unstorage'
 import { itSkipInE2E } from '../../helpers/test-utils.js'

@@ -8,7 +8,6 @@
 import { describe, it, expect } from 'vitest'
 import { createStorage } from 'unstorage'
 import { awsProviderTests } from '../../providers/aws/aws-provider-tests.js'
-import { baseMtTests } from '../../variants/base/base-mt-tests.js'
 import awsSsmDriver from '../../../src/drivers/aws-ssm/aws-ssm.js'
 import { MockSSMClient } from '../../helpers/mock-ssm.js'
 import type { AwsSsmDriverOptions } from '../../../src/drivers/aws-ssm/types.js'

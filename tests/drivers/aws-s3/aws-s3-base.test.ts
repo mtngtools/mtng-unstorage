@@ -8,7 +8,6 @@
 import { describe, it, expect } from 'vitest'
 import { createStorage } from 'unstorage'
 import { awsProviderTests } from '../../providers/aws/aws-provider-tests.js'
-import { baseMtTests } from '../../variants/base/base-mt-tests.js'
 import { itSkipInE2E } from '../../helpers/test-utils.js'
 import awsS3Driver from '../../../src/drivers/aws-s3/aws-s3.js'
 import { MockS3Client } from '../../helpers/mock-s3.js'
